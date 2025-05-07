@@ -1,9 +1,8 @@
 use flume::{Receiver, Sender};
-use gio::{
-    glib,
-    prelude::{Cast, CastNone, ListModelExt},
-};
-use glib::{object::IsA, variant::ToVariant, BoxedAnyObject, MainContext, Priority};
+use gtk::gio::prelude::{Cast, CastNone, ListModelExt};
+use gtk::glib::{object::IsA, variant::ToVariant, BoxedAnyObject, MainContext, Priority};
+use gtk::prelude::BoxExt;
+use gtk::{gio, glib};
 use gtk::{
     prelude::WidgetExt,
     prelude::{ListItemExt, SelectionModelExt},

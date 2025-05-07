@@ -1,4 +1,3 @@
-use anyhow::{anyhow, Error};
 use arboard::Clipboard;
 use chin_tools::AResult;
 use chrono::{DateTime, Utc};
@@ -70,7 +69,7 @@ impl Plugin for ClipPlugin {
 
     fn handle_input(&self, user_input: &UserInput) -> AResult<Vec<(ClipResult, i32)>> {
         if user_input.input.is_empty() {
-            return Err(anyhow!("empty input"));
+            return eanyhow!("empty input");
         }
 
         let vec = CONNECTION.with_borrow(|conn| {

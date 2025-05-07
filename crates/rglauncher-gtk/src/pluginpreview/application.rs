@@ -1,6 +1,6 @@
 use crate::iconcache;
 use crate::pluginpreview::PluginPreview;
-use glib::object::Cast;
+use gtk::glib::object::Cast;
 use gtk::prelude::GridExt;
 use rglcore::plugins::app::AppResult;
 
@@ -61,7 +61,7 @@ impl PluginPreview for AppPreview {
 
     fn set_preview(&self, plugin_result: &Self::PluginResult) {
         self.icon
-            .set_from_gicon(iconcache::get_icon(plugin_result.icon_name.as_str()).get());
+            .set_from_pixbuf(Some(&iconcache::get_pixbuf(plugin_result.icon_name.as_str())));
 
         self.name.set_label(plugin_result.app_name.as_str());
         self.exec.set_label(plugin_result.desktop_path.as_str());

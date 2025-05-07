@@ -3,7 +3,7 @@ use crate::pluginpreview::PluginPreview;
 use rglcore::plugins::win::WinResult;
 use rglcore::plugins::PluginResult;
 
-use glib::object::Cast;
+use gtk::glib::object::Cast;
 use gtk::pango::WrapMode::WordChar;
 use gtk::prelude::BoxExt;
 use gtk::Align::{Center, End};
@@ -90,7 +90,7 @@ impl PluginPreview for WMWindowPreview {
 
         self.workspace.set_label(&plugin_result.workspace);
         self.big_pic
-            .set_from_gicon(iconcache::get_icon(plugin_result.icon_name()).get());
+            .set_from_pixbuf(Some(&iconcache::get_pixbuf(plugin_result.icon_name())));
     }
 
     fn get_id(&self) -> &str {

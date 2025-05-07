@@ -9,11 +9,12 @@ use crate::pluginpreview::dictionary::DictPreview;
 #[cfg(feature = "wmwin")]
 use crate::pluginpreview::windows::WMWindowPreview;
 use flume::Receiver;
-use glib::MainContext;
+use gtk::glib::MainContext;
 use gtk::pango::WrapMode::WordChar;
 use gtk::prelude::{GridExt, WidgetExt};
 use gtk::Align::Center;
-use rglcore::config::Config;
+use gtk::BinLayout;
+use rglcore::config::{Config, ParsedConfig};
 use rglcore::plugins::{PRWrapper, PluginResult, PluginResultEnum};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -85,7 +86,7 @@ impl PluginPreviewBuilder {
         stack.add_named(&app_preview.get_preview(), Some(app_preview.get_id()));
 
         let default = gtk::Label::builder()
-            .label(glib::GString::from(constants::PROJECT_NAME))
+            .label(gtk::glib::GString::from(constants::PROJECT_NAME))
             .vexpand(true)
             .hexpand(true)
             .valign(Center)
@@ -172,11 +173,11 @@ pub struct Preview {
     preview_rx: Receiver<PreviewMsg>,
 
     pub preview_window: gtk::Stack,
-    config: Arc<Config>,
+    config: Arc<ParsedConfig>,
 }
 
 impl Preview {
-    pub fn new(preview_rx: Receiver<PreviewMsg>, config: Arc<Config>) -> Self {
+    pub fn new(preview_rx: Receiver<PreviewMsg>, config: Arc<ParsedConfig>) -> Self {
         let preview_window = gtk::Stack::builder()
             .vexpand(true)
             .hexpand(true)
@@ -206,7 +207,7 @@ impl Preview {
                         PreviewMsg::PluginResult(pr) => Some(pr),
                         PreviewMsg::Clear => None,
                     };
-                    glib::idle_add_local_once(move || {
+                    gtk::glib::idle_add_local_once(move || {
                         plugin_preview_builder
                             .borrow()
                             .set_preview(opt_plugin_result.as_ref().map(|v| &**v));

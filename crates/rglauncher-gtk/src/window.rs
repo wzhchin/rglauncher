@@ -6,11 +6,12 @@ use crate::pluginpreview::Preview;
 use crate::resulthandler::ResultHolder;
 use crate::sidebar::SidebarMsg;
 use flume::{Receiver, Sender};
-use glib::{clone, MainContext};
-use gtk::prelude::EntryBufferExtManual;
+use gtk::glib::{clone, MainContext};
+use gtk::{glib, BinLayout};
+use gtk::prelude::{EntryBufferExtManual, LayoutManagerExt};
 use gtk::prelude::{BoxExt, EntryExt, GtkWindowExt, WidgetExt};
 use gtk::{gdk, ApplicationWindow};
-use rglcore::config::Config;
+use rglcore::config::ParsedConfig;
 use rglcore::dispatcher::DispatchMsg;
 use rglcore::ResultMsg;
 use std::sync::Arc;
@@ -34,7 +35,7 @@ pub struct RGWindow {
 impl RGWindow {
     pub fn new(
         app: &RGLApplication,
-        config: Arc<Config>,
+        config: Arc<ParsedConfig>,
         dispatch_tx: &flume::Sender<DispatchMsg>,
         launcher_tx: &Sender<LauncherMsg>,
     ) -> Self {
@@ -61,7 +62,6 @@ impl RGWindow {
         window.set_child(Some(&main_box));
 
         let inputbar = InputBar::new(&result_tx, &window_tx);
-
         let left_box = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .hexpand(true)
@@ -179,7 +179,7 @@ impl RGWindow {
 
     pub fn setup_one(
         app: &RGLApplication,
-        arguments: Arc<Config>,
+        arguments: Arc<ParsedConfig>,
         dispatch_tx: &flume::Sender<DispatchMsg>,
         launcher_tx: &Sender<LauncherMsg>,
     ) {

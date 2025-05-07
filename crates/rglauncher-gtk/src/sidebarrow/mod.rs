@@ -28,7 +28,7 @@ impl SidebarRow {
         let imp = self.imp();
 
         imp.image
-            .set_from_gicon(iconcache::get_icon(plugin_result.icon_name()).get());
+            .set_from_pixbuf(Some(&iconcache::get_pixbuf(plugin_result.icon_name())));
 
         let name = plugin_result.name();
 

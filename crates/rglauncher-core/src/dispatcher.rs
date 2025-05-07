@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::{Config, ParsedConfig};
 use crate::plugins::app::AppPlugin;
 #[cfg(feature = "calc")]
 use crate::plugins::calc::CalcPlugin;
@@ -24,7 +24,7 @@ use std::cell::RefCell;
 use std::sync::Arc;
 
 lazy_static! {
-    static ref CONFIG: ArcSwapOption<Config> = ArcSwapOption::empty();
+    static ref CONFIG: ArcSwapOption<ParsedConfig> = ArcSwapOption::empty();
 }
 
 thread_local! {
@@ -121,7 +121,7 @@ macro_rules! handle_refresh {
 }
 
 impl PluginDispatcher {
-    pub fn new(config: &Arc<Config>) -> AResult<PluginDispatcher> {
+    pub fn new(config: &Arc<ParsedConfig>) -> AResult<PluginDispatcher> {
         let (tx, rx) = flume::unbounded();
 
         CONFIG.store(Some(config.clone()));

@@ -4,8 +4,7 @@ use rglcore::userinput::{Signal, UserInput};
 use rglcore::ResultMsg;
 
 use crate::window::WindowMsg;
-use glib::{ControlFlow, MainContext};
-use gtk;
+use gtk::glib::{ControlFlow, MainContext};
 use gtk::prelude::EntryExt;
 
 #[derive(Clone, Debug)]

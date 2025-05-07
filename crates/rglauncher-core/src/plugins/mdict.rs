@@ -1,4 +1,3 @@
-use anyhow::Context;
 use chin_tools::AResult;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use mdict::mdx_utils::{self, MDictLookup};

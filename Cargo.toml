@@ -5,8 +5,8 @@ members = ["crates/rglauncher-core", "crates/rglauncher-gtk", "vendor/mdict"]
 resolver = "2"
 
 [workspace.dependencies]
-chin-tools = { git = "https://github.com/aeghn/chin-tools" }
-
+chin-tools = { path = "../chin-tools/crates/chin-tools" }
+chin-wayland-utils = { path = "../chin-tools/crates/chin-wayland-utils" }
 
 [profile.release]
 lto = true

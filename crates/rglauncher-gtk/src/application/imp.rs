@@ -1,5 +1,5 @@
 use crate::launcher::Launcher;
-use gio::ApplicationHoldGuard;
+use gtk::gio::ApplicationHoldGuard;
 use gtk::gdk::Display;
 use gtk::subclass::prelude::*;
 use gtk::{glib, style_context_add_provider_for_display, CssProvider};

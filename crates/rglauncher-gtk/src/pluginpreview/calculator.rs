@@ -1,5 +1,5 @@
 use crate::pluginpreview::PluginPreview;
-use glib::object::Cast;
+use gtk::glib::object::Cast;
 use gtk::prelude::{GridExt, TextBufferExt};
 use gtk::WrapMode::WordChar;
 use rglcore::plugins::calc::CalcResult;

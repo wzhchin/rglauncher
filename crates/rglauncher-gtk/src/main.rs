@@ -42,8 +42,8 @@ pub fn daemon() -> EResult {
     let mut app = RGLApplication::new();
 
     let arguments = arguments::Arguments::parse();
-    let config = Arc::new(Config::read_from_toml_file(arguments.config_file.as_ref()));
-    iconcache::set_icon_dirs(config.common.icon_paths.clone());
+    let config = Arc::new(Config::read_from_toml_file(arguments.config_file.as_ref())?);
+    iconcache::set_config(&config)?;
 
     let launcher = launcher::Launcher::spawn(app.clone(), config, &launcher_tx, &launcher_rx)?;
 

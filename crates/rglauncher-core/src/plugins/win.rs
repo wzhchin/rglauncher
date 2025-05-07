@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 use std::process::Command;
 
-use anyhow::Context;
 use arc_swap::ArcSwap;
-use chin_tools::{AResult, SharedStr};
+use chin_tools::{aanyhow, AResult, AnyhowContext, SharedStr};
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
 use serde::{Deserialize, Serialize};
@@ -12,7 +11,7 @@ use tracing::{error, info};
 use crate::dispatcher::CONNECTION;
 use crate::impl_history;
 use crate::plugins::history::{HistoryDb, HistoryItem};
-use crate::plugins::{win, Plugin, PluginResult};
+use crate::plugins::{Plugin, PluginResult};
 use crate::userinput::UserInput;
 
 use crate::util::score_utils;
@@ -38,7 +37,7 @@ impl WMEnum {
         } else if let Ok(_) = std::env::var("NIRI_SOCKET") {
             Ok(WMEnum::Niri)
         } else {
-            Err(anyhow::anyhow!("unknown not implemented"))
+            Err(aanyhow!("unknown not implemented"))
         }
     }
 }

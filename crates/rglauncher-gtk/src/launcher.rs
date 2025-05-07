@@ -4,16 +4,16 @@ use crate::application::RGLApplication;
 use crate::window::RGWindow;
 use chin_tools::AResult;
 use flume::{Receiver, Sender};
-use glib::MainContext;
+use gtk::glib::MainContext;
 use rglcore::{
-    config::Config,
+    config::{Config, ParsedConfig},
     dispatcher::{DispatchMsg, PluginDispatcher},
 };
 
 #[derive(Clone)]
 pub struct Launcher {
     app: RGLApplication,
-    pub config: Arc<Config>,
+    pub config: Arc<ParsedConfig>,
 
     dispatcher_tx: flume::Sender<DispatchMsg>,
 
@@ -30,7 +30,7 @@ pub enum LauncherMsg {
 impl Launcher {
     pub fn spawn(
         application: RGLApplication,
-        config: Arc<Config>,
+        config: Arc<ParsedConfig>,
         launcher_tx: &Sender<LauncherMsg>,
         launcher_rx: &Receiver<LauncherMsg>,
     ) -> AResult<Self> {

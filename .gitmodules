@@ -1,0 +1,3 @@
+[submodule "crates/chin-tools"]
+	path = crates/chin-tools
+	url = https://github.com/wzhchin/chin-tools

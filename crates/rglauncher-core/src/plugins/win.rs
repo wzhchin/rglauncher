@@ -285,7 +285,7 @@ impl Plugin for WinPlugin {
 
             if score > 0 {
                 let win = window.clone();
-                result.push((win, score_utils::high(score as i64)));
+                result.push((win, score_utils::high((score * 8) as i64)));
             }
         }
 

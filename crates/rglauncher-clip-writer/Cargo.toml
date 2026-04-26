@@ -14,5 +14,4 @@ miette = { version = "7.6", features = ["fancy"] }
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 dirs = "6"
-image = "0.25"
-mime-sniffer = "0.1"
+chrono = { version = "0.4", features = ["serde"] }

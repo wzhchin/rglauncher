@@ -1,1 +1,1 @@
-SELECT COUNT(*) FROM clipboard
+SELECT COUNT(*) FROM history

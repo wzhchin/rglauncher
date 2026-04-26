@@ -54,40 +54,24 @@ pub fn init_db(path_db: &Path) -> Result<Connection> {
 
 fn apply_migrations(conn: &Connection) -> Result<()> {
     conn.execute_batch(
-        "CREATE TABLE IF NOT EXISTS clipboard (
-            id INTEGER PRIMARY KEY,
-            content BLOB NOT NULL UNIQUE,
-            last_updated INTEGER NOT NULL
-        ) STRICT;",
+        "CREATE TABLE IF NOT EXISTS history (
+            id TEXT PRIMARY KEY,
+            content_type TEXT NOT NULL,
+            content TEXT NOT NULL,
+            favicon TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            source TEXT DEFAULT 'System' NOT NULL,
+            source_icon TEXT,
+            language TEXT,
+            icount INT DEFAULT 0 NOT NULL
+        );",
     )
     .into_diagnostic()
-    .context("failed to create clipboard table")?;
+    .context("failed to create history table")?;
 
-    conn.execute_batch("CREATE INDEX IF NOT EXISTS last_updated ON clipboard (last_updated);")
+    conn.execute_batch("CREATE INDEX IF NOT EXISTS idx_history_timestamp ON history (timestamp);")
         .into_diagnostic()
-        .context("failed to create last_updated index")?;
-
-    let has_content_type = has_column(conn, "clipboard", "content_type");
-    if !has_content_type {
-        conn.execute_batch(
-            "ALTER TABLE clipboard ADD COLUMN content_type INTEGER;
-             ALTER TABLE clipboard ADD COLUMN mimetype TEXT;
-             ALTER TABLE clipboard ADD COLUMN extra_preview_data TEXT;",
-        )
-        .into_diagnostic()
-        .context("failed to add preview data columns")?;
-    }
+        .context("failed to create timestamp index")?;
 
     Ok(())
-}
-
-fn has_column(conn: &Connection, table: &str, column: &str) -> bool {
-    let columns: Vec<String> = conn
-        .prepare(&format!("PRAGMA table_info({table})"))
-        .unwrap()
-        .query_map([], |row| row.get::<_, String>(1))
-        .unwrap()
-        .flatten()
-        .collect();
-    columns.iter().any(|c| c == column)
 }

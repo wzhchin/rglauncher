@@ -3,7 +3,6 @@ use regex::Regex;
 use rusqlite::{Connection, params};
 
 use crate::types::{ClipboardEntry, SearchParams};
-use crate::now;
 
 #[tracing::instrument(skip(conn))]
 pub fn count_entries(conn: &Connection) -> Result<usize> {
@@ -19,7 +18,7 @@ pub fn count_entries(conn: &Connection) -> Result<usize> {
 }
 
 #[tracing::instrument(skip(conn))]
-pub fn get_all_entries(conn: &Connection, preview_width: usize) -> Result<Vec<ClipboardEntry>> {
+pub fn get_all_entries(conn: &Connection) -> Result<Vec<ClipboardEntry>> {
     tracing::debug!("getting all entries");
 
     let mut stmt = conn
@@ -28,7 +27,7 @@ pub fn get_all_entries(conn: &Connection, preview_width: usize) -> Result<Vec<Cl
         .context("failed to prepare: get all entries")?;
 
     let mapped = stmt
-        .query_map([preview_width], |row| ClipboardEntry::try_from(row))
+        .query_map([], |row| ClipboardEntry::try_from(row))
         .into_diagnostic()
         .context("failed to query: get all entries")?;
     let entries: Vec<ClipboardEntry> = mapped
@@ -70,11 +69,11 @@ fn vacuum(conn: &Connection) -> Result<()> {
 }
 
 #[tracing::instrument(skip(conn))]
-pub fn delete_entries_older_than(conn: &Connection, timestamp: u64) -> Result<usize> {
-    tracing::debug!("deleting old entries");
+pub fn delete_entries_older_than(conn: &Connection, cutoff: &str) -> Result<usize> {
+    tracing::debug!("deleting old entries before {}", cutoff);
 
     let changed = conn
-        .execute(include_str!("./queries/delete_old.sql"), [timestamp])
+        .execute(include_str!("./queries/delete_old.sql"), [cutoff])
         .into_diagnostic()
         .context("failed to execute: delete old entries")?;
 
@@ -109,7 +108,7 @@ pub fn trim_entries(conn: &Connection, limit: usize) -> Result<usize> {
 }
 
 #[tracing::instrument(skip(conn))]
-pub fn get_entry_by_id(conn: &Connection, id: u64) -> Result<ClipboardEntry> {
+pub fn get_entry_by_id(conn: &Connection, id: &str) -> Result<ClipboardEntry> {
     tracing::debug!("getting entry by ID");
 
     conn.query_row(
@@ -135,7 +134,7 @@ pub fn get_estimated_free_space(conn: &Connection) -> Result<u64> {
 }
 
 #[tracing::instrument(skip(conn))]
-pub fn delete_entry_by_id(conn: &Connection, id: u64) -> Result<()> {
+pub fn delete_entry_by_id(conn: &Connection, id: &str) -> Result<()> {
     tracing::debug!("deleting specific entry by ID");
 
     let changed = conn
@@ -154,32 +153,34 @@ pub fn delete_entry_by_id(conn: &Connection, id: u64) -> Result<()> {
 #[tracing::instrument(skip_all)]
 pub fn upsert_entry(conn: &Connection, entry: impl AsRef<ClipboardEntry>) -> Result<()> {
     let ClipboardEntry {
-        content,
-        mimetype,
-        extra_preview_data,
+        id,
         content_type,
+        content,
+        favicon,
+        timestamp,
+        source,
+        source_icon,
+        language,
         ..
     } = entry.as_ref();
-    let content_type =
-        content_type.expect("should not be storing an entry with an unset content type") as u8;
 
-    tracing::debug!("creating entry");
+    tracing::debug!("upserting entry, id={}", id);
     tracing::debug!(
         "entry content preview: {}",
-        String::from_utf8_lossy(&content[..16.min(content.len())])
+        &content[..64.min(content.len())]
     );
-
-    let timestamp = now();
-    tracing::trace!("current_timestamp={timestamp}");
 
     conn.execute(
         include_str!("./queries/upsert_post.sql"),
         params![
-            timestamp,
+            id,
+            content_type.to_string(),
             content,
-            content_type,
-            mimetype,
-            extra_preview_data
+            favicon,
+            timestamp,
+            source,
+            source_icon,
+            language,
         ],
     )
     .map(|_| ())
@@ -191,7 +192,6 @@ pub fn upsert_entry(conn: &Connection, entry: impl AsRef<ClipboardEntry>) -> Res
 pub fn search_entries(
     conn: &Connection,
     search_params: SearchParams,
-    preview_width: usize,
 ) -> Result<Vec<ClipboardEntry>> {
     let SearchParams {
         query,
@@ -209,10 +209,10 @@ pub fn search_entries(
                 Regex::new(q)
                     .into_diagnostic()
                     .context("invalid regex pattern")?;
-                where_clauses.push("CAST(content AS TEXT) regexp ?".to_string());
+                where_clauses.push("content regexp ?".to_string());
                 sql_params.push(Box::new(q.clone()));
             } else {
-                where_clauses.push("CAST(content AS TEXT) LIKE ?".to_string());
+                where_clauses.push("content LIKE ?".to_string());
                 sql_params.push(Box::new(format!("%{q}%")));
             }
         }
@@ -226,16 +226,10 @@ pub fn search_entries(
 
     let sql = format!(
         "SELECT
-            id,
-            last_updated,
-            substr(content, 1, ?) AS content,
-            octet_length(content) AS content_size,
-            content_type,
-            mimetype,
-            extra_preview_data
-        FROM clipboard
+            id, content_type, content, favicon, timestamp, source, source_icon, language, icount
+        FROM history
         {where_sql}
-        ORDER BY last_updated DESC
+        ORDER BY timestamp DESC
         LIMIT ? OFFSET ?"
     );
 
@@ -247,8 +241,7 @@ pub fn search_entries(
         .context("failed to prepare: search entries")?;
 
     let param_refs: Vec<&dyn rusqlite::types::ToSql> = {
-        let mut refs: Vec<&dyn rusqlite::types::ToSql> = Vec::with_capacity(sql_params.len() + 3);
-        refs.push(&preview_width as &dyn rusqlite::types::ToSql);
+        let mut refs: Vec<&dyn rusqlite::types::ToSql> = Vec::with_capacity(sql_params.len() + 2);
         for p in &sql_params {
             refs.push(p.as_ref());
         }

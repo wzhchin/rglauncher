@@ -1,1 +1,1 @@
-DELETE FROM clipboard WHERE id = ?
+DELETE FROM history WHERE id = ?

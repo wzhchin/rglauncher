@@ -1,1 +1,1 @@
-DELETE FROM clipboard;
+DELETE FROM history;

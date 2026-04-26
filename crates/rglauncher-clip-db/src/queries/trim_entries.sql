@@ -1,3 +1,3 @@
 DELETE
-FROM clipboard
-WHERE id IN (SELECT id FROM clipboard ORDER BY last_updated ASC LIMIT ?)
+FROM history
+WHERE id IN (SELECT id FROM history ORDER BY timestamp ASC LIMIT ?)

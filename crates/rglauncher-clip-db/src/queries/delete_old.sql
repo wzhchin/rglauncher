@@ -1,1 +1,1 @@
-DELETE FROM clipboard WHERE last_updated < ?
+DELETE FROM history WHERE timestamp < ?

@@ -1,21 +1,27 @@
 use std::io::Read;
 
-use image::GenericImageView;
 use miette::{Context, IntoDiagnostic, Result};
-use rglauncher_clip_db::{ClipboardEntry, delete_all_entries, init_db, upsert_entry};
+use rglauncher_clip_db::{ClipboardEntry, ContentType, delete_all_entries, init_db, trim_entries, upsert_entry, hash_bytes, delete_entries_older_than};
 
 const MAX_ENTRIES: usize = 1000;
-const MAX_ENTRY_AGE_SECS: u64 = 14 * 24 * 3600;
+const MAX_ENTRY_AGE_DAYS: i64 = 14;
 const MAX_ENTRY_LEN: usize = 5_000_000;
 
 fn main() -> Result<()> {
     init_tracing();
 
-    let path_db = dirs::data_local_dir()
-        .context("could not identify user data directory")?
-        .join("clipvault.db");
+    let base_dir = dirs::cache_dir()
+        .context("could not identify user cache directory")?
+        .join("rglauncher");
 
-    store(&path_db)
+    std::fs::create_dir_all(&base_dir)
+        .into_diagnostic()
+        .context("failed to create cache directory")?;
+
+    let path_db = base_dir.join("clip.db");
+    let data_dir = base_dir.join("clip-data");
+
+    store(&path_db, &data_dir)
 }
 
 fn init_tracing() {
@@ -27,7 +33,7 @@ fn init_tracing() {
         .init();
 }
 
-fn store(path_db: &std::path::Path) -> Result<()> {
+fn store(path_db: &std::path::Path, data_dir: &std::path::Path) -> Result<()> {
     if let Ok(s) = std::env::var("CLIPBOARD_STATE") {
         tracing::debug!("CLIPBOARD_STATE={s}");
         match s.as_str() {
@@ -67,61 +73,89 @@ fn store(path_db: &std::path::Path) -> Result<()> {
         return Ok(());
     }
 
-    if buf.trim_ascii().is_empty() {
-        tracing::debug!("only ASCII whitespace content");
-        return Ok(());
-    }
-
     let conn = &init_db(path_db)?;
 
-    if MAX_ENTRY_AGE_SECS != 0 {
-        let timestamp = rglauncher_clip_db::now() - MAX_ENTRY_AGE_SECS;
-        let _ = rglauncher_clip_db::delete_entries_older_than(conn, timestamp);
+    if MAX_ENTRY_AGE_DAYS != 0 {
+        let cutoff = chrono::Utc::now() - chrono::Duration::days(MAX_ENTRY_AGE_DAYS);
+        let _ = delete_entries_older_than(conn, &cutoff.to_rfc3339());
     }
 
-    let entry = {
-        let content_type = content_inspector::inspect(&buf);
-        let (mut mimetype, mut extra_preview_data) = (None, None);
+    let inspected = content_inspector::inspect(&buf);
 
-        if content_type.is_binary() {
-            if let Some((img_mimetype, img)) = decode_image(&buf) {
-                let (w, h) = img.dimensions();
-                extra_preview_data = Some(format!("{w}x{h}"));
-                mimetype = Some(img_mimetype.into());
-            } else if let Some(content_mimetype) = sniff_mimetype(&buf) {
-                mimetype = Some(content_mimetype);
-            }
+    let entry = if inspected.is_binary() {
+        let file_path = save_binary_to_file(data_dir, &buf)?;
+        ClipboardEntry::new(
+            "System".to_string(),
+            ContentType::Image,
+            file_path,
+            None,
+            None,
+            None,
+        )
+    } else {
+        let text = String::from_utf8_lossy(&buf).to_string();
+        if text.trim().is_empty() {
+            tracing::trace!("only whitespace content");
+            return Ok(());
         }
 
-        ClipboardEntry {
-            content: buf,
-            content_type: Some(content_type),
-            mimetype,
-            extra_preview_data,
-            ..Default::default()
-        }
+        ClipboardEntry::new(
+            "System".to_string(),
+            ContentType::Text,
+            text,
+            None,
+            None,
+            None,
+        )
     };
 
     upsert_entry(conn, entry)?;
 
     if MAX_ENTRIES != 0 {
-        let _ = rglauncher_clip_db::trim_entries(conn, MAX_ENTRIES);
+        let _ = trim_entries(conn, MAX_ENTRIES);
     }
 
     Ok(())
 }
 
-fn decode_image(data: &[u8]) -> Option<(&'static str, image::DynamicImage)> {
-    use std::io::Cursor;
-    let img_reader = image::ImageReader::new(Cursor::new(data))
-        .with_guessed_format()
-        .ok()?;
-    let mimetype = img_reader.format()?.to_mime_type();
-    let img = img_reader.decode().ok()?;
-    Some((mimetype, img))
+fn save_binary_to_file(data_dir: &std::path::Path, data: &[u8]) -> Result<String> {
+    let images_dir = data_dir.join("images");
+
+    std::fs::create_dir_all(&images_dir)
+        .into_diagnostic()
+        .context("failed to create images directory")?;
+
+    let hash = hash_bytes(data);
+    let ext = detect_image_extension(data).unwrap_or("bin");
+    let file_name = format!("{}.{}", hash, ext);
+    let file_path = images_dir.join(&file_name);
+
+    if !file_path.exists() {
+        std::fs::write(&file_path, data)
+            .into_diagnostic()
+            .context("failed to write image file")?;
+    }
+
+    Ok(file_path.to_string_lossy().to_string())
 }
 
-fn sniff_mimetype(data: &[u8]) -> Option<String> {
-    use mime_sniffer::MimeTypeSniffer;
-    data.sniff_mime_type().map(String::from)
+fn detect_image_extension(data: &[u8]) -> Option<&'static str> {
+    if data.len() < 8 {
+        return None;
+    }
+
+    if &data[0..8] == b"\x89PNG\r\n\x1a\n" {
+        return Some("png");
+    }
+    if &data[0..3] == b"\xff\xd8\xff" {
+        return Some("jpg");
+    }
+    if &data[0..4] == b"RIFF" && data.len() >= 12 && &data[8..12] == b"WEBP" {
+        return Some("webp");
+    }
+    if &data[0..6] == b"GIF87a" || &data[0..6] == b"GIF89a" {
+        return Some("gif");
+    }
+
+    None
 }

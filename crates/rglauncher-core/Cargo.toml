@@ -37,7 +37,6 @@ arboard = { version = "3.3.0", default-features = false, features = [
 chin-tools = { workspace = true }
 arc-swap = "1.7.1"
 
-mdict = { path = "../../vendor/mdict", optional = true }
 futures = { version = "0.3.31", features = ["thread-pool"], default-features = false}
 sys-locale = "0.3.2"
 
@@ -45,5 +44,4 @@ sys-locale = "0.3.2"
 default = ["wmwin", "calc"]
 wmwin = []
 calc = ["meval"]
-fmdict = ["mdict"]
 clip = ["arboard"]

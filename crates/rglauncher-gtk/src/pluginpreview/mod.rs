@@ -4,8 +4,6 @@ use crate::pluginpreview::application::AppPreview;
 use crate::pluginpreview::calculator::CalcPreview;
 #[cfg(feature = "clip")]
 use crate::pluginpreview::clipboard::ClipPreview;
-#[cfg(feature = "mdict")]
-use crate::pluginpreview::dictionary::DictPreview;
 #[cfg(feature = "wmwin")]
 use crate::pluginpreview::windows::WMWindowPreview;
 use flume::Receiver;
@@ -25,8 +23,6 @@ mod application;
 mod calculator;
 #[cfg(feature = "clip")]
 mod clipboard;
-#[cfg(feature = "mdict")]
-mod dictionary;
 #[cfg(feature = "wmwin")]
 mod windows;
 
@@ -54,20 +50,13 @@ pub struct PluginPreviewBuilder {
     calc_preview: CalcPreview,
     #[cfg(feature = "clip")]
     clip_preview: ClipPreview,
-    #[cfg(feature = "mdict")]
-    dict_preview: DictPreview,
     #[cfg(feature = "wmwin")]
     wind_preview: WMWindowPreview,
 }
 
 impl PluginPreviewBuilder {
-    pub fn new(stack: &gtk::Stack, config: &Config) -> Self {
+    pub fn new(stack: &gtk::Stack, _config: &Config) -> Self {
         let app_preview = AppPreview::new();
-        #[cfg(feature = "mdict")]
-        let dict_preview = DictPreview::new();
-        #[cfg(feature = "mdict")]
-        stack.add_named(&dict_preview.get_preview(), Some(dict_preview.get_id()));
-
         #[cfg(feature = "calc")]
         let calc_preview = CalcPreview::new();
         #[cfg(feature = "calc")]
@@ -96,9 +85,6 @@ impl PluginPreviewBuilder {
         stack.add_named(&default, Some(DEFAULT_ID));
         stack.set_visible_child(&default);
 
-        #[cfg(feature = "mdict")]
-        dict_preview.add_csses(config.dict.as_ref());
-
         PluginPreviewBuilder {
             stack: stack.clone(),
             app_preview,
@@ -106,8 +92,6 @@ impl PluginPreviewBuilder {
             calc_preview,
             #[cfg(feature = "clip")]
             clip_preview,
-            #[cfg(feature = "mdict")]
-            dict_preview,
             #[cfg(feature = "wmwin")]
             wind_preview,
         }
@@ -116,8 +100,6 @@ impl PluginPreviewBuilder {
     pub fn set_preview(&self, pr: Option<&PluginResultEnum>) -> Option<()> {
         if let Some(plugin_result) = pr {
             match plugin_result {
-                #[cfg(feature = "mdict")]
-                PluginResultEnum::MDict(r) => self.dict_preview.set_preview(r),
                 PluginResultEnum::Calc(r) => self.calc_preview.set_preview(r),
                 PluginResultEnum::App(r) => self.app_preview.set_preview(r),
                 PluginResultEnum::Win(r) => self.wind_preview.set_preview(r),

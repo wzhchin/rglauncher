@@ -1,8 +1,5 @@
 [db]
 db_path="/home/chin/.cache/rglauncher/store.db"
 
-[dict]
-dir_path="/home/chin/files/others/"
-
 [common]
 icon_paths=["/usr/share/icons/Papirus/64x64/apps", "/usr/share/icons/Papirus/64x64/devices"]

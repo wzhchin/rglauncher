@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use std::io;
 use std::option::Option::None;
 use std::os::unix::process::CommandExt;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use tracing::{error, info};
 
@@ -111,6 +112,10 @@ impl AppPlugin {
 
         let histories: Vec<HistoryItem<AppResult>> =
             CONNECTION.with_borrow(|e| HistoryDb::new(e.as_ref()).fetch_histories(TYPE_ID))?;
+        let histories = histories
+            .into_iter()
+            .filter(|e| PathBuf::from(e.body.desktop_path.as_str()).exists())
+            .collect();
 
         Ok(AppPlugin {
             applications,
@@ -159,7 +164,12 @@ impl Plugin for AppPlugin {
         let _ = CONNECTION.with_borrow(|conn| {
             let ho = HistoryDb::new(conn.as_ref());
             self.history.remove_unvalid(
-                |k, _| applications.iter().find(|w| w.get_id() == k.as_str()).is_none(),
+                |k, _| {
+                    applications
+                        .iter()
+                        .find(|w| w.get_id() == k.as_str())
+                        .is_none()
+                },
                 ho,
             )
         });
@@ -194,7 +204,7 @@ impl Plugin for AppPlugin {
         &TYPE_ID
     }
 
-impl_history!();
+    impl_history!();
 }
 
 //https://github.com/alacritty/alacritty/blob/f7811548ae9cabb1122f43b42fec4d660318bc96/alacritty/src/daemon.rs#L28

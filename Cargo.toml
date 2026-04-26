@@ -1,6 +1,6 @@
 [workspace]
 
-members = ["crates/rglauncher-core", "crates/rglauncher-gtk", "vendor/mdict"]
+members = ["crates/rglauncher-core", "crates/rglauncher-gtk"]
 exclude = ["crates/chin-tools"]
 
 resolver = "2"

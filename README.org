@@ -9,7 +9,6 @@ GNU/Linux App Launcher based on GTK4 and Rust
 - App Launcher
 - Window Switcher
 - Calculator
-- Dict [Mdict]
 - Clipboard [Text Only, based on wl-clipboard]
 - History
 
@@ -35,5 +34,4 @@ GNU/Linux App Launcher based on GTK4 and Rust
 
   You can get more details from [[./docs/arch.org]]
 
-* Credits
-  - https://github.com/12101111/mdict_rs
+

@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 gtk = { version = "0.9.6", package = "gtk4" }
-webkit6 = { version = "0.4.0", optional = true }
 
 fragile = "2.0.0"
 clap = { version = "4.5.37", features = ["derive"] }
@@ -25,7 +24,6 @@ chin-tools = { workspace = true }
 
 [features]
 default = ["rglcore","wmwin", "calc"]
-mdict = ["webkit6", "rglcore?/fmdict"]
 calc = ["rglcore?/calc"]
 wmwin = ["rglcore?/wmwin"]
 clip = ["rglcore?/clip"]

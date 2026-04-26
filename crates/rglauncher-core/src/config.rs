@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap, env, ops::Deref, path::{Path, PathBuf}, str::FromStr
+    collections::HashMap, env, ops::Deref, path::PathBuf, str::FromStr
 };
 
 use chin_tools::{aanyhow, AResult};
@@ -13,7 +13,6 @@ pub struct CommonConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub db: DatabaseConfig,
-    pub dict: Option<DictConfig>,
     pub ui: Option<UI>,
     pub common: CommonConfig,
 }
@@ -21,11 +20,6 @@ pub struct Config {
 #[derive(Debug, Clone, Deserialize)]
 pub struct DatabaseConfig {
     pub db_path: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct DictConfig {
-    pub dir_path: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]

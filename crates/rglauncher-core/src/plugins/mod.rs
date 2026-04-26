@@ -4,8 +4,6 @@ pub mod calc;
 #[cfg(feature = "clip")]
 pub mod clip;
 pub mod history;
-#[cfg(feature = "mdict")]
-pub mod mdict;
 #[cfg(feature = "wmwin")]
 pub mod win;
 
@@ -17,8 +15,6 @@ use chin_tools::{AResult, EResult};
 #[cfg(feature = "clip")]
 use clip::ClipPlugin;
 use history::HistoryItem;
-#[cfg(feature = "fmdict")]
-use mdict::DictPlugin;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use win::WinPlugin;
 
@@ -26,8 +22,6 @@ use win::WinPlugin;
 use crate::plugins::calc::{CalcReq, CalcResult};
 #[cfg(feature = "clip")]
 use crate::plugins::clip::{ClipReq, ClipResult};
-#[cfg(feature = "mdict")]
-use crate::plugins::mdict::{DictMsg, DictResult};
 #[cfg(feature = "wmwin")]
 use crate::plugins::win::{WinResult, WindowMsg};
 use crate::plugins::app::{AppReq, AppResult};
@@ -57,8 +51,6 @@ pub enum PluginEnum {
     Calc(CalcPlugin),
     #[cfg(feature = "clip")]
     Clip(ClipPlugin),
-    #[cfg(feature = "mdict")]
-    Dict(DictPlugin),
     #[cfg(feature = "wmwin")]
     Win(WinPlugin),
 }
@@ -66,8 +58,6 @@ pub enum PluginEnum {
 macro_rules! pimpl {
     ($self:expr, $($tt:tt)*) => {{
         match $self {
-            #[cfg(feature = "mdict")]
-            PluginEnum::Dict(r) => {r.$($tt)*}
             #[cfg(feature = "calc")]
             PluginEnum::Calc(r) => {r.$($tt)*}
             PluginEnum::App(r) => {r.$($tt)*}
@@ -174,8 +164,6 @@ pub enum PluginReqEnum {
     Calc(CalcReq),
     #[cfg(feature = "clip")]
     Clip(ClipReq),
-    #[cfg(feature = "mdict")]
-    Dict(DictMsg),
     #[cfg(feature = "wmwin")]
     Win(WindowMsg),
 }
@@ -199,8 +187,6 @@ pub trait PluginResult: Send + Sync + Clone + DeserializeOwned + Serialize {
 #[derive(Clone, Deserialize, Serialize)]
 pub enum PluginResultEnum {
     App(AppResult),
-    #[cfg(feature = "mdict")]
-    MDict(DictResult),
     #[cfg(feature = "calc")]
     Calc(CalcResult),
     #[cfg(feature = "wmwin")]
@@ -265,8 +251,6 @@ macro_rules! primpl {
     ($self:expr, $method:ident) => {
         match $self {
             PluginResultEnum::App(r) => r.$method(),
-            #[cfg(feature = "mdict")]
-            PluginResultEnum::MDict(r) => r.$method(),
             #[cfg(feature = "calc")]
             PluginResultEnum::Calc(r) => r.$method(),
             #[cfg(feature = "wmwin")]

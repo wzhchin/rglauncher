@@ -1,12 +1,10 @@
-use crate::config::{Config, ParsedConfig};
+use crate::config::ParsedConfig;
 use crate::plugins::app::AppPlugin;
 #[cfg(feature = "calc")]
 use crate::plugins::calc::CalcPlugin;
 #[cfg(feature = "clip")]
 use crate::plugins::clip::{ClipPlugin, ClipReq};
 use crate::plugins::history::{HistoryDb, HistoryItem};
-#[cfg(feature = "mdict")]
-use crate::plugins::mdict::{DictMsg, DictPlugin};
 #[cfg(feature = "wmwin")]
 use crate::plugins::win::WinPlugin;
 use crate::plugins::{history, PRWrapper, Plugin, PluginResult};
@@ -59,8 +57,6 @@ pub struct PluginDispatcher {
     calc: Arc<CalcPlugin>,
     #[cfg(feature = "clip")]
     clip: Arc<ClipPlugin>,
-    #[cfg(feature = "fmdict")]
-    dict: Arc<DictPlugin>,
 }
 
 macro_rules! handle_input {
@@ -131,8 +127,6 @@ impl PluginDispatcher {
         let win = WinPlugin::new()?.into();
         #[cfg(feature = "clip")]
         let clip = ClipPlugin::new()?.into();
-        #[cfg(feature = "fmdict")]
-        let dict = DictPlugin::new(config.dict.as_ref())?.into();
         let calc = CalcPlugin::new()?.into();
 
         Ok(PluginDispatcher {
@@ -141,8 +135,6 @@ impl PluginDispatcher {
             #[cfg(feature = "clip")]
             clip,
             calc,
-            #[cfg(feature = "fmdict")]
-            dict,
             tx,
             rx,
         })
@@ -166,8 +158,6 @@ impl PluginDispatcher {
                     handle_input!(user_input_arc, self.calc, executor, sender);
                     #[cfg(feature = "clip")]
                     handle_input!(user_input_arc, self.clip, executor, sender);
-                    #[cfg(feature = "fmdict")]
-                    handle_input!(user_input_arc, self.dict, executor, sender);
                 }
                 DispatchMsg::RefreshContent => {
                     handle_refresh!(executor, self.app);
@@ -177,11 +167,6 @@ impl PluginDispatcher {
                     #[cfg(feature = "clip")]
                     {
                         handle_refresh!(self.clip);
-                    }
-
-                    #[cfg(feature = "fmdict")]
-                    {
-                        handle_refresh!(self.dict);
                     }
                 }
                 DispatchMsg::SetHistory(prwrapper) => {

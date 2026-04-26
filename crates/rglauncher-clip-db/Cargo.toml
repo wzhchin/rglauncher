@@ -1,0 +1,11 @@
+[package]
+name = "rglauncher-clip-db"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rusqlite = { version = "0.33.0", features = ["bundled", "functions"] }
+content_inspector = "0.2"
+miette = { version = "7.6", features = ["fancy"] }
+tracing = { version = "0.1" }
+regex = "1"

@@ -1,6 +1,11 @@
 [workspace]
 
-members = ["crates/rglauncher-core", "crates/rglauncher-gtk"]
+members = [
+    "crates/rglauncher-core",
+    "crates/rglauncher-gtk",
+    "crates/rglauncher-clip-db",
+    "crates/rglauncher-clip-writer",
+]
 exclude = ["crates/chin-tools"]
 
 resolver = "2"

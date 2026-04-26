@@ -1,0 +1,18 @@
+[package]
+name = "rglauncher-clip-writer"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "rglauncher-clip-writer"
+path = "src/main.rs"
+
+[dependencies]
+rglauncher-clip-db = { path = "../rglauncher-clip-db" }
+content_inspector = "0.2"
+miette = { version = "7.6", features = ["fancy"] }
+tracing = { version = "0.1" }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+dirs = "6"
+image = "0.25"
+mime-sniffer = "0.1"

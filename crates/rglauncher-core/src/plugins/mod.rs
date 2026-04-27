@@ -144,6 +144,18 @@ impl Plugin for PluginEnum {
                     });
                 }
             }
+            #[cfg(feature = "clip")]
+            PluginEnum::Clip(plugin) => {
+                if let PluginResultEnum::Clip(r) = item.body {
+                    let _ = plugin.add_history(HistoryItem {
+                        body: r,
+                        id: item.id,
+                        plugin_type: item.plugin_type,
+                        weight: item.weight,
+                        update_time: item.update_time,
+                    });
+                }
+            }
         }
 
         Ok(())
@@ -154,6 +166,8 @@ impl Plugin for PluginEnum {
             PluginEnum::App(p) => p.get_history().into_iter().map(|e| e.into()).collect(),
             PluginEnum::Calc(p) => p.get_history().into_iter().map(|e| e.into()).collect(),
             PluginEnum::Win(p) => p.get_history().into_iter().map(|e| e.into()).collect(),
+            #[cfg(feature = "clip")]
+            PluginEnum::Clip(p) => p.get_history().into_iter().map(|e| e.into()).collect(),
         }
     }
 }
@@ -220,6 +234,8 @@ macro_rules! plugin_box {
 plugin_box!(AppResult, App);
 plugin_box!(CalcResult, Calc);
 plugin_box!(WinResult, Win);
+#[cfg(feature = "clip")]
+plugin_box!(ClipResult, Clip);
 
 #[derive(Clone)]
 pub struct PRWrapper {

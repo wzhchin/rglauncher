@@ -11,7 +11,6 @@ use gtk::glib::MainContext;
 use gtk::pango::WrapMode::WordChar;
 use gtk::prelude::{GridExt, WidgetExt};
 use gtk::Align::Center;
-use gtk::BinLayout;
 use rglcore::config::{Config, ParsedConfig};
 use rglcore::plugins::{PRWrapper, PluginResult, PluginResultEnum};
 use std::cell::RefCell;

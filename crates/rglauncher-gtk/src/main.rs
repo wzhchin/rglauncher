@@ -13,6 +13,7 @@ mod window;
 use chin_tools::{AResult, EResult};
 use clap::Parser;
 use rglcore::config::Config;
+use rglcore::PluginType;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::sync::Arc;
@@ -25,12 +26,14 @@ use crate::launcher::LauncherMsg;
 use flume::Sender;
 use std::os::unix::net::{UnixListener, UnixStream};
 
-pub fn daemon() -> EResult {
+pub fn daemon(arguments: arguments::Arguments) -> EResult {
     tracing_subscriber::fmt()
         .with_max_level(Level::INFO)
         .with_thread_ids(true)
         .with_timer(tracing_subscriber::fmt::time::time())
         .init();
+
+    let plugin_types = arguments.plugin_types().unwrap_or_default();
 
     let (launcher_tx, launcher_rx) = flume::unbounded();
 
@@ -41,11 +44,10 @@ pub fn daemon() -> EResult {
 
     let mut app = RGLApplication::new();
 
-    let arguments = arguments::Arguments::parse();
     let config = Arc::new(Config::read_from_toml_file(arguments.config_file.as_ref())?);
     iconcache::set_config(&config)?;
 
-    let launcher = launcher::Launcher::spawn(app.clone(), config, &launcher_tx, &launcher_rx)?;
+    let launcher = launcher::Launcher::spawn(app.clone(), config, plugin_types, &launcher_tx, &launcher_rx)?;
 
     app.set_launcher(launcher);
     app.set_hold();
@@ -54,6 +56,27 @@ pub fn daemon() -> EResult {
     app.run_with_args(&empty_args);
 
     Ok(())
+}
+
+fn parse_socket_msg(msg: &str) -> LauncherMsg {
+    if let Some(type_str) = msg.strip_prefix("new_window:") {
+        let mut types = Vec::new();
+        for part in type_str.split(',') {
+            match part.trim() {
+                "calc" => types.push(PluginType::Calc),
+                "win" => types.push(PluginType::Win),
+                "app" => types.push(PluginType::App),
+                #[cfg(feature = "clip")]
+                "clip" => types.push(PluginType::Clip),
+                _ => {}
+            }
+        }
+        LauncherMsg::NewWindow(types)
+    } else if msg == "new_window" {
+        LauncherMsg::NewWindow(vec![])
+    } else {
+        LauncherMsg::NewWindow(vec![])
+    }
 }
 
 fn build_uds(app_msg_tx: &Sender<LauncherMsg>) -> AResult<()> {
@@ -73,9 +96,10 @@ fn build_uds(app_msg_tx: &Sender<LauncherMsg>) -> AResult<()> {
                 stream.read_to_string(&mut response)?;
                 info!("Got Echo {}", response);
 
-                if response == "new_window" {
+                let msg = parse_socket_msg(&response);
+                if matches!(msg, LauncherMsg::NewWindow(_)) {
                     info!("Creating new window.");
-                    app_msg_tx.send(LauncherMsg::NewWindow)?;
+                    app_msg_tx.send(msg)?;
                 }
             }
             Err(e) => {
@@ -86,12 +110,19 @@ fn build_uds(app_msg_tx: &Sender<LauncherMsg>) -> AResult<()> {
 }
 
 fn main() -> EResult {
+    let arguments = arguments::Arguments::parse();
+
+    let socket_msg = match &arguments.r#type {
+        Some(t) => format!("new_window:{}", t),
+        None => "new_window".to_string(),
+    };
+
     match UnixStream::connect(constants::UNIX_SOCKET_PATH) {
         Ok(mut stream) => {
-            stream.write_all("new_window".as_bytes())?;
+            stream.write_all(socket_msg.as_bytes())?;
         }
         Err(_) => {
-            daemon()?;
+            daemon(arguments)?;
         }
     }
 

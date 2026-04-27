@@ -1,90 +1,97 @@
+use crate::iconcache;
 use crate::pluginpreview::PluginPreview;
-use chrono::{DateTime, Local};
-use glib::object::Cast;
-use gtk::prelude::{BoxExt, TextBufferExt};
-use gtk::Align::End;
-use gtk::WrapMode::WordChar;
-use gtk::{Orientation, TextBuffer, TextView, Widget};
 use rglcore::plugins::clip::ClipResult;
+use rglcore::plugins::PluginResult;
+
+use gtk::glib::object::Cast;
+use gtk::pango::WrapMode::WordChar;
+use gtk::prelude::BoxExt;
+use gtk::Align::{Center, End};
+use gtk::{Image, Orientation, Widget};
 
 pub struct ClipPreview {
-    root: gtk::Box,
-    insert_time: gtk::Label,
-    update_time: gtk::Label,
+    preview: gtk::Widget,
+    big_pic: gtk::Image,
+    title: gtk::Label,
+    content_type: gtk::Label,
     count: gtk::Label,
-    mime: gtk::Label,
-    text_buffer: gtk::TextBuffer,
 }
 
 impl PluginPreview for ClipPreview {
     type PluginResult = ClipResult;
+
     fn new() -> Self {
-        let preview = gtk::Box::builder()
-            .hexpand(true)
+        let r#box = gtk::Box::builder()
             .vexpand(true)
+            .hexpand(true)
+            .valign(Center)
+            .halign(Center)
             .orientation(Orientation::Vertical)
             .build();
 
-        let text_buffer = TextBuffer::builder().build();
-        let text_view = TextView::builder()
-            .hexpand(true)
-            .wrap_mode(WordChar)
-            .css_classes(["raw-box"])
-            .buffer(&text_buffer)
-            .vexpand(false)
-            .focusable(false)
-            .build();
-
-        let text_window = gtk::ScrolledWindow::builder()
-            .hexpand(true)
+        let big_pic = Image::builder()
+            .icon_name("clipboard")
+            .pixel_size(256)
             .vexpand(true)
             .build();
-        text_window.set_child(Some(&text_view));
+
+        r#box.append(&big_pic);
+
+        let title = gtk::Label::builder()
+            .css_classes(["font-16"])
+            .wrap(true)
+            .wrap_mode(WordChar)
+            .selectable(true)
+            .build();
+        r#box.append(&title);
 
         let sep = super::get_seprator();
-
-        let info_grid = gtk::Grid::builder()
+        let extra = gtk::Grid::builder()
             .hexpand(true)
             .vexpand(false)
-            .css_classes(["prev-btm-box"])
             .valign(End)
+            .css_classes(["prev-btm-box"])
             .build();
 
-        let insert_time = super::build_pair_line(&info_grid, 0, "Insert Time: ");
+        let content_type = super::build_pair_line(&extra, 1, "Type: ");
+        let count = super::build_pair_line(&extra, 2, "Count: ");
 
-        let update_time = super::build_pair_line(&info_grid, 1, "Update Time: ");
+        let sw = gtk::ScrolledWindow::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .build();
+        sw.set_child(Some(&r#box));
 
-        let count = super::build_pair_line(&info_grid, 2, "Insert Count: ");
+        let tb = gtk::Box::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .orientation(Orientation::Vertical)
+            .build();
 
-        let mime = super::build_pair_line(&info_grid, 3, "Mime: ");
-
-        preview.append(&text_window);
-        preview.append(&sep);
-        preview.append(&info_grid);
+        tb.append(&sw);
+        tb.append(&sep);
+        tb.append(&extra);
 
         ClipPreview {
-            root: preview,
-            insert_time,
-            update_time,
+            preview: tb.upcast(),
+            big_pic,
+            title,
+            content_type,
             count,
-            mime,
-            text_buffer,
         }
     }
 
     fn get_preview(&self) -> Widget {
-        self.root.clone().upcast()
+        self.preview.clone().upcast()
     }
 
     fn set_preview(&self, plugin_result: &Self::PluginResult) {
-        let il: DateTime<Local> = DateTime::from(plugin_result.insert_time);
-        self.insert_time.set_label(il.to_string().as_str());
-        let il: DateTime<Local> = DateTime::from(plugin_result.update_time);
-        self.update_time.set_label(il.to_string().as_str());
-        self.count
-            .set_text(plugin_result.count.to_string().as_str());
-        self.text_buffer.set_text(plugin_result.content.as_str());
-        self.mime.set_text(plugin_result.mime.as_str());
+        self.title.set_text(plugin_result.display_name.as_str());
+        self.content_type
+            .set_label(&plugin_result.content_type);
+        self.count.set_label(&plugin_result.count.to_string());
+        self.big_pic
+            .set_from_pixbuf(Some(&iconcache::get_pixbuf(plugin_result.icon_name())));
     }
 
     fn get_id(&self) -> &str {

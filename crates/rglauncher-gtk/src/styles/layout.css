@@ -87,3 +87,9 @@ listview row {
 .font-32 {
     font-size: 32px;
 }
+
+
+.border-red {
+        border-left: #f00 1px solid;
+    padding: 5px 5px 5px 5px;
+}

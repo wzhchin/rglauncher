@@ -9,10 +9,10 @@ use crate::plugins::history::{HistoryDb, HistoryItem};
 use crate::plugins::win::WinPlugin;
 use crate::plugins::{history, PRWrapper, Plugin, PluginResult};
 use crate::userinput::UserInput;
-use crate::ResultMsg;
+use crate::PluginType;
 use arc_swap::ArcSwapOption;
 use chin_tools::{AResult, EResult};
-use chrono::{NaiveDateTime, Utc};
+use chrono::Utc;
 use flume::{Receiver, Sender};
 use futures::executor::ThreadPool;
 use futures::task::SpawnExt;
@@ -42,7 +42,7 @@ pub fn db_init() {
 
 #[derive(Clone)]
 pub enum DispatchMsg {
-    UserInput(Arc<UserInput>, Sender<ResultMsg>),
+    UserInput(Arc<UserInput>, Sender<crate::ResultMsg>),
     RefreshContent,
     SetHistory(PRWrapper),
     PluginMsg,
@@ -52,11 +52,13 @@ pub struct PluginDispatcher {
     pub tx: Sender<DispatchMsg>,
     rx: Receiver<DispatchMsg>,
 
-    app: Arc<AppPlugin>,
-    win: Arc<WinPlugin>,
-    calc: Arc<CalcPlugin>,
+    app: Option<Arc<AppPlugin>>,
+    #[cfg(feature = "wmwin")]
+    win: Option<Arc<WinPlugin>>,
+    #[cfg(feature = "calc")]
+    calc: Option<Arc<CalcPlugin>>,
     #[cfg(feature = "clip")]
-    clip: Arc<ClipPlugin>,
+    clip: Option<Arc<ClipPlugin>>,
 }
 
 macro_rules! handle_input {
@@ -64,7 +66,7 @@ macro_rules! handle_input {
         let user_input = $user_input_arc.clone();
         if user_input.input.is_empty() {
             $sender
-                .send_async(ResultMsg::Result(
+                .send_async(crate::ResultMsg::Result(
                     user_input.signal.clone(),
                     $plugin
                         .get_history()
@@ -85,7 +87,7 @@ macro_rules! handle_input {
                             return;
                         }
                         sender
-                            .send_async(ResultMsg::Result(
+                            .send_async(crate::ResultMsg::Result(
                                 user_input.signal.clone(),
                                 result.into_iter().map(|e| e.into()).collect(),
                             ))
@@ -107,34 +109,71 @@ macro_rules! handle_input {
     }};
 }
 
-macro_rules! handle_refresh {
-    ($executor:tt, $plugin:expr) => {
-        let plugin = $plugin.clone();
-        if let Err(err) = $executor.spawn(async move { plugin.refresh_content() }) {
-            tracing::error!("unable to refresh {}", err)
+macro_rules! dispatch_input {
+    ($plugin:expr, $user_input_arc:expr, $executor:expr, $sender:expr) => {
+        if let Some(plugin) = $plugin.as_ref() {
+            handle_input!($user_input_arc, plugin, $executor, $sender);
         }
     };
 }
 
+macro_rules! handle_refresh {
+    ($executor:tt, $plugin:expr) => {
+        if let Some(plugin) = $plugin.as_ref() {
+            let plugin = plugin.clone();
+            if let Err(err) = $executor.spawn(async move { plugin.refresh_content() }) {
+                tracing::error!("unable to refresh {}", err)
+            }
+        }
+    };
+}
+
+fn contains(types: &[PluginType], target: PluginType) -> bool {
+    types.is_empty() || types.contains(&target)
+}
+
 impl PluginDispatcher {
-    pub fn new(config: &Arc<ParsedConfig>) -> AResult<PluginDispatcher> {
+    pub fn new(config: &Arc<ParsedConfig>, plugin_types: Vec<PluginType>) -> AResult<PluginDispatcher> {
         let (tx, rx) = flume::unbounded();
 
         CONFIG.store(Some(config.clone()));
         db_init();
 
-        let app = AppPlugin::new()?.into();
-        let win = WinPlugin::new()?.into();
+        let app = if contains(&plugin_types, PluginType::App) {
+            Some(Arc::new(AppPlugin::new()?))
+        } else {
+            None
+        };
+
+        #[cfg(feature = "wmwin")]
+        let win = if contains(&plugin_types, PluginType::Win) {
+            Some(Arc::new(WinPlugin::new()?))
+        } else {
+            None
+        };
+
+        #[cfg(feature = "calc")]
+        let calc = if contains(&plugin_types, PluginType::Calc) {
+            Some(Arc::new(CalcPlugin::new()?))
+        } else {
+            None
+        };
+
         #[cfg(feature = "clip")]
-        let clip = ClipPlugin::new()?.into();
-        let calc = CalcPlugin::new()?.into();
+        let clip = if contains(&plugin_types, PluginType::Clip) {
+            Some(Arc::new(ClipPlugin::new()?))
+        } else {
+            None
+        };
 
         Ok(PluginDispatcher {
             app,
+            #[cfg(feature = "wmwin")]
             win,
+            #[cfg(feature = "calc")]
+            calc,
             #[cfg(feature = "clip")]
             clip,
-            calc,
             tx,
             rx,
         })
@@ -153,52 +192,73 @@ impl PluginDispatcher {
                 DispatchMsg::UserInput(user_input, sender) => {
                     let user_input_arc: Arc<UserInput> = user_input;
 
-                    handle_input!(user_input_arc, self.app, executor, sender);
-                    handle_input!(user_input_arc, self.win, executor, sender);
-                    handle_input!(user_input_arc, self.calc, executor, sender);
+                    dispatch_input!(self.app, user_input_arc, executor, sender);
+                    #[cfg(feature = "wmwin")]
+                    dispatch_input!(self.win, user_input_arc, executor, sender);
+                    #[cfg(feature = "calc")]
+                    dispatch_input!(self.calc, user_input_arc, executor, sender);
                     #[cfg(feature = "clip")]
-                    handle_input!(user_input_arc, self.clip, executor, sender);
+                    dispatch_input!(self.clip, user_input_arc, executor, sender);
                 }
                 DispatchMsg::RefreshContent => {
                     handle_refresh!(executor, self.app);
+                    #[cfg(feature = "wmwin")]
                     handle_refresh!(executor, self.win);
+                    #[cfg(feature = "calc")]
                     handle_refresh!(executor, self.calc);
 
                     #[cfg(feature = "clip")]
-                    {
-                        handle_refresh!(self.clip);
-                    }
+                    handle_refresh!(executor, self.clip);
                 }
                 DispatchMsg::SetHistory(prwrapper) => {
                     let history_id = HistoryDb::get_id(&prwrapper.body);
 
                     match prwrapper.body {
                         crate::plugins::PluginResultEnum::Calc(body) => {
-                            let _ = self.calc.add_history(HistoryItem {
-                                id: history_id,
-                                plugin_type: body.get_type_id().into(),
-                                body: body,
-                                weight: 1.,
-                                update_time: Utc::now().naive_utc(),
-                            });
+                            if let Some(calc) = self.calc.as_ref() {
+                                let _ = calc.add_history(HistoryItem {
+                                    id: history_id,
+                                    plugin_type: body.get_type_id().into(),
+                                    body: body,
+                                    weight: 1.,
+                                    update_time: Utc::now().naive_utc(),
+                                });
+                            }
                         }
                         crate::plugins::PluginResultEnum::Win(body) => {
-                            let _ = self.win.add_history(HistoryItem {
-                                id: history_id,
-                                plugin_type: body.get_type_id().into(),
-                                body: body,
-                                weight: 1.,
-                                update_time: Utc::now().naive_utc(),
-                            });
+                            #[cfg(feature = "wmwin")]
+                            if let Some(win) = self.win.as_ref() {
+                                let _ = win.add_history(HistoryItem {
+                                    id: history_id,
+                                    plugin_type: body.get_type_id().into(),
+                                    body: body,
+                                    weight: 1.,
+                                    update_time: Utc::now().naive_utc(),
+                                });
+                            }
                         }
                         crate::plugins::PluginResultEnum::App(body) => {
-                            let _ = self.app.add_history(HistoryItem {
-                                id: history_id,
-                                plugin_type: body.get_type_id().into(),
-                                body: body,
-                                weight: 1.,
-                                update_time: Utc::now().naive_utc(),
-                            });
+                            if let Some(app) = self.app.as_ref() {
+                                let _ = app.add_history(HistoryItem {
+                                    id: history_id,
+                                    plugin_type: body.get_type_id().into(),
+                                    body: body,
+                                    weight: 1.,
+                                    update_time: Utc::now().naive_utc(),
+                                });
+                            }
+                        }
+                        #[cfg(feature = "clip")]
+                        crate::plugins::PluginResultEnum::Clip(body) => {
+                            if let Some(clip) = self.clip.as_ref() {
+                                let _ = clip.add_history(HistoryItem {
+                                    id: history_id,
+                                    plugin_type: body.get_type_id().into(),
+                                    body: body,
+                                    weight: 1.,
+                                    update_time: Utc::now().naive_utc(),
+                                });
+                            }
                         }
                     }
                 }

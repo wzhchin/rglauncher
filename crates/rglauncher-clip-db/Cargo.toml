@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rusqlite = { version = "0.33.0", features = ["bundled", "functions"] }
+rusqlite = { version = "0.39.0", features = ["bundled", "functions"] }
 miette = { version = "7.6", features = ["fancy"] }
 tracing = { version = "0.1" }
 regex = "1"

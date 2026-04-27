@@ -11,7 +11,7 @@ pub fn count_entries(conn: &Connection) -> Result<usize> {
     conn.query_row(
         include_str!("./queries/count_entries.sql"),
         [],
-        |row| row.get::<_, usize>(0),
+        |row| row.get::<_, i64>(0).map(|v| v as usize),
     )
     .into_diagnostic()
     .context("failed to query: count of clipboard entries")
@@ -96,7 +96,7 @@ pub fn trim_entries(conn: &Connection, limit: usize) -> Result<usize> {
 
     let del = count - limit;
     let changed = conn
-        .execute(include_str!("./queries/trim_entries.sql"), [del])
+        .execute(include_str!("./queries/trim_entries.sql"), [del as i64])
         .into_diagnostic()
         .context("failed to execute: trim clipboard entries")?;
     assert_eq!(
@@ -127,7 +127,7 @@ pub fn get_estimated_free_space(conn: &Connection) -> Result<u64> {
     conn.query_row(
         "SELECT freelist_count * page_size AS freelist_size FROM pragma_freelist_count(), pragma_page_size()",
         [],
-        |row| row.get::<_, u64>("freelist_size"),
+        |row| row.get::<_, i64>("freelist_size").map(|v| v as u64),
     )
     .into_diagnostic()
     .context("couldn't get estimated free space")
@@ -242,11 +242,11 @@ pub fn search_entries(
 
     let param_refs: Vec<&dyn rusqlite::types::ToSql> = {
         let mut refs: Vec<&dyn rusqlite::types::ToSql> = Vec::with_capacity(sql_params.len() + 2);
+        sql_params.push(Box::new(limit as i64));
+        sql_params.push(Box::new(offset as i64));
         for p in &sql_params {
             refs.push(p.as_ref());
         }
-        refs.push(&limit as &dyn rusqlite::types::ToSql);
-        refs.push(&offset as &dyn rusqlite::types::ToSql);
         refs
     };
 

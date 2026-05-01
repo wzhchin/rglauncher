@@ -4,16 +4,18 @@ use gtk::pango::WrapMode::WordChar as PangoWordChar;
 use gtk::prelude::{BoxExt, TextBufferExt, WidgetExt};
 use gtk::Align::{End, Fill, Start};
 use gtk::WrapMode::WordChar;
-use gtk::{Orientation, TextBuffer, TextView, Widget};
+use gtk::{Orientation, Stack, StackTransitionType, TextBuffer, TextView, Widget};
 
 use rglcore::plugins::clip::ClipResult;
+
+const STACK_PAGE_TEXT: &str = "text";
+const STACK_PAGE_PICTURE: &str = "picture";
 
 pub struct ClipPreview {
     preview: gtk::Widget,
     title: gtk::Label,
     text_buffer: gtk::TextBuffer,
-    text_window: gtk::ScrolledWindow,
-    picture_window: gtk::ScrolledWindow,
+    stack: Stack,
     picture: gtk::Picture,
     content_type: gtk::Label,
     count: gtk::Label,
@@ -78,12 +80,18 @@ impl PluginPreview for ClipPreview {
         let picture_window = gtk::ScrolledWindow::builder()
             .hexpand(true)
             .vexpand(true)
-            .visible(false)
             .build();
         picture_window.set_child(Some(&picture));
 
-        r#box.append(&text_window);
-        r#box.append(&picture_window);
+        let stack = Stack::builder()
+            .hexpand(true)
+            .vexpand(true)
+            .transition_type(StackTransitionType::Crossfade)
+            .build();
+        stack.add_titled(&text_window, Some(STACK_PAGE_TEXT), "Text");
+        stack.add_titled(&picture_window, Some(STACK_PAGE_PICTURE), "Picture");
+
+        r#box.append(&stack);
 
         let sep = super::get_seprator();
         let extra = gtk::Grid::builder()
@@ -116,8 +124,7 @@ impl PluginPreview for ClipPreview {
             preview: tb.upcast(),
             title,
             text_buffer,
-            text_window,
-            picture_window,
+            stack,
             picture,
             content_type,
             count,
@@ -136,13 +143,11 @@ impl PluginPreview for ClipPreview {
         if plugin_result.is_image {
             let file = gtk::gio::File::for_path(&plugin_result.content);
             self.picture.set_file(Some(&file));
-            self.picture_window.set_visible(true);
-            self.text_window.set_visible(false);
+            self.stack.set_visible_child_name(STACK_PAGE_PICTURE);
             self.title.set_visible(false);
         } else {
             self.text_buffer.set_text(plugin_result.content.as_str());
-            self.text_window.set_visible(true);
-            self.picture_window.set_visible(false);
+            self.stack.set_visible_child_name(STACK_PAGE_TEXT);
             self.title.set_visible(true);
             self.title.set_text(plugin_result.display_name.as_str());
         }

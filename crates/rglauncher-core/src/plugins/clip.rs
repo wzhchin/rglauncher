@@ -78,7 +78,7 @@ impl PluginResult for ClipResult {
         if self.is_image {
             "image-x-generic"
         } else {
-            "clipboard"
+            "text-x-generic"
         }
     }
 

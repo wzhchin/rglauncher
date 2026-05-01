@@ -2,4 +2,4 @@
 db_path="/home/chin/.cache/rglauncher/store.db"
 
 [common]
-icon_paths=["/usr/share/icons/Papirus/64x64/apps", "/usr/share/icons/Papirus/64x64/devices"]
+icon_paths=["/usr/share/icons/Papirus/64x64/apps", "/usr/share/icons/Papirus/64x64/devices", "/usr/share/icons/Papirus/64x64/mimetypes"]

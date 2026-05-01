@@ -18,6 +18,7 @@
         <property name="focus-on-click">False</property>
         <property name="pixel-size">28</property>
         <property name="margin-end">10</property>
+        <property name="valign">center</property>
       </object>
     </child>
     <child>

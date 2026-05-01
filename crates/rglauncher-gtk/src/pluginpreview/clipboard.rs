@@ -1,4 +1,5 @@
 use crate::pluginpreview::PluginPreview;
+use chrono::Local;
 use gtk::glib::object::Cast;
 use gtk::pango::WrapMode::WordChar as PangoWordChar;
 use gtk::prelude::{BoxExt, TextBufferExt, WidgetExt};
@@ -13,12 +14,12 @@ const STACK_PAGE_PICTURE: &str = "picture";
 
 pub struct ClipPreview {
     preview: gtk::Widget,
-    title: gtk::Label,
     text_buffer: gtk::TextBuffer,
     stack: Stack,
     picture: gtk::Picture,
     content_type: gtk::Label,
     count: gtk::Label,
+    time: gtk::Label,
 }
 
 impl PluginPreview for ClipPreview {
@@ -32,17 +33,6 @@ impl PluginPreview for ClipPreview {
             .halign(Fill)
             .orientation(Orientation::Vertical)
             .build();
-
-        let title = gtk::Label::builder()
-            .css_classes(["font-16"])
-            .wrap(true)
-            .wrap_mode(PangoWordChar)
-            .selectable(true)
-            .halign(Start)
-            .margin_start(10)
-            .margin_top(10)
-            .build();
-        r#box.append(&title);
 
         let text_buffer = TextBuffer::builder().build();
         let text_view = TextView::builder()
@@ -86,6 +76,8 @@ impl PluginPreview for ClipPreview {
         let stack = Stack::builder()
             .hexpand(true)
             .vexpand(true)
+            .vhomogeneous(true)
+            .hhomogeneous(true)
             .transition_type(StackTransitionType::Crossfade)
             .build();
         stack.add_titled(&text_window, Some(STACK_PAGE_TEXT), "Text");
@@ -103,6 +95,7 @@ impl PluginPreview for ClipPreview {
 
         let content_type = super::build_pair_line(&extra, 1, "Type: ");
         let count = super::build_pair_line(&extra, 2, "Count: ");
+        let time = super::build_pair_line(&extra, 3, "Time: ");
 
         let sw = gtk::ScrolledWindow::builder()
             .vexpand(true)
@@ -122,12 +115,12 @@ impl PluginPreview for ClipPreview {
 
         ClipPreview {
             preview: tb.upcast(),
-            title,
             text_buffer,
             stack,
             picture,
             content_type,
             count,
+            time,
         }
     }
 
@@ -136,20 +129,19 @@ impl PluginPreview for ClipPreview {
     }
 
     fn set_preview(&self, plugin_result: &Self::PluginResult) {
-        self.content_type
-            .set_label(&plugin_result.content_type);
+        self.content_type.set_label(&plugin_result.content_type);
         self.count.set_label(&plugin_result.count.to_string());
+        let local_time = plugin_result.update_time.with_timezone(&Local);
+        self.time
+            .set_label(&local_time.format("%Y-%m-%d %H:%M:%S").to_string());
 
         if plugin_result.is_image {
             let file = gtk::gio::File::for_path(&plugin_result.content);
             self.picture.set_file(Some(&file));
             self.stack.set_visible_child_name(STACK_PAGE_PICTURE);
-            self.title.set_visible(false);
         } else {
             self.text_buffer.set_text(plugin_result.content.as_str());
             self.stack.set_visible_child_name(STACK_PAGE_TEXT);
-            self.title.set_visible(true);
-            self.title.set_text(plugin_result.display_name.as_str());
         }
     }
 

@@ -26,7 +26,7 @@ impl ApplicationImpl for RGLApplication {
         info!("Activating");
         self.parent_activate();
         if let Some(launcher) = self.launcher.borrow().get() {
-            launcher.new_window(launcher.plugin_types.clone());
+            launcher.new_window(vec![]);
         }
     }
 

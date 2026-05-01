@@ -13,7 +13,7 @@ use gtk::prelude::{BoxExt, EntryExt, GtkWindowExt, WidgetExt};
 use gtk::{gdk, ApplicationWindow};
 use rglcore::config::ParsedConfig;
 use rglcore::dispatcher::DispatchMsg;
-use rglcore::ResultMsg;
+use rglcore::{PluginType, ResultMsg};
 use std::sync::Arc;
 
 pub enum WindowMsg {
@@ -38,12 +38,13 @@ impl RGWindow {
         config: Arc<ParsedConfig>,
         dispatch_tx: &flume::Sender<DispatchMsg>,
         launcher_tx: &Sender<LauncherMsg>,
+        plugin_types: Vec<PluginType>,
     ) -> Self {
         let (sidebar_tx, sidebar_rx) = flume::unbounded();
         let (preview_tx, preview_rx) = flume::unbounded();
         let (window_tx, window_rx) = flume::unbounded();
 
-        let result_tx = ResultHolder::start(launcher_tx, dispatch_tx, &sidebar_tx, &preview_tx);
+        let result_tx = ResultHolder::start(launcher_tx, dispatch_tx, &sidebar_tx, &preview_tx, plugin_types);
 
         let window = ApplicationWindow::builder()
             .default_width(810)
@@ -182,8 +183,9 @@ impl RGWindow {
         arguments: Arc<ParsedConfig>,
         dispatch_tx: &flume::Sender<DispatchMsg>,
         launcher_tx: &Sender<LauncherMsg>,
+        plugin_types: Vec<PluginType>,
     ) {
-        let window = Self::new(app, arguments, dispatch_tx, launcher_tx);
+        let window = Self::new(app, arguments, dispatch_tx, launcher_tx, plugin_types);
 
         window.setup_keybindings();
         window.receive_messages();

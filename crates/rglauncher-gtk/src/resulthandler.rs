@@ -5,7 +5,7 @@ use flume::{Receiver, Sender};
 use rglcore::dispatcher::DispatchMsg;
 use rglcore::plugins::{PRWrapper, PluginResult};
 use rglcore::userinput::Signal;
-use rglcore::ResultMsg;
+use rglcore::{PluginType, ResultMsg};
 use std::thread;
 use std::time::{Duration, Instant};
 use tracing::{debug, error};
@@ -23,6 +23,7 @@ pub struct ResultHolder {
     current_index: Option<u32>,
     signal_and_results: Option<(Signal, Vec<PRWrapper>)>,
     last: Instant,
+    plugin_types: Vec<PluginType>,
 }
 
 impl ResultHolder {
@@ -31,6 +32,7 @@ impl ResultHolder {
         dispatch_tx: &flume::Sender<DispatchMsg>,
         sidebar_tx: &Sender<SidebarMsg>,
         preview_tx: &Sender<PreviewMsg>,
+        plugin_types: Vec<PluginType>,
     ) -> Self {
         let (result_tx, result_rx) = flume::unbounded();
 
@@ -45,6 +47,7 @@ impl ResultHolder {
             preview_tx: preview_tx.clone(),
             last: Instant::now(),
             signal_and_results: None,
+            plugin_types,
         }
     }
 
@@ -95,7 +98,7 @@ impl ResultHolder {
                         debug!("Send message to dispatcher: {:?}", input.input);
                         match self
                             .dispatch_tx
-                            .send(DispatchMsg::UserInput(input.into(), self.result_tx.clone()))
+                            .send(DispatchMsg::UserInput(input.into(), self.result_tx.clone(), self.plugin_types.clone()))
                         {
                             Ok(_) => {
                                 self.last = Instant::now();
@@ -156,8 +159,9 @@ impl ResultHolder {
         dispatch_tx: &flume::Sender<DispatchMsg>,
         sidebar_tx: &Sender<SidebarMsg>,
         preview_tx: &Sender<PreviewMsg>,
+        plugin_types: Vec<PluginType>,
     ) -> Sender<ResultMsg> {
-        let mut result_handler = Self::new(launcher_tx, dispatch_tx, sidebar_tx, preview_tx);
+        let mut result_handler = Self::new(launcher_tx, dispatch_tx, sidebar_tx, preview_tx, plugin_types);
 
         let result_tx = result_handler.result_tx.clone();
 

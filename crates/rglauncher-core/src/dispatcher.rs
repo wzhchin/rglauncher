@@ -42,8 +42,8 @@ pub fn db_init() {
 
 #[derive(Clone)]
 pub enum DispatchMsg {
-    UserInput(Arc<UserInput>, Sender<crate::ResultMsg>),
-    RefreshContent,
+    UserInput(Arc<UserInput>, Sender<crate::ResultMsg>, Vec<PluginType>),
+    RefreshContent(Vec<PluginType>),
     SetHistory(PRWrapper),
     PluginMsg,
 }
@@ -96,19 +96,23 @@ macro_rules! handle_input {
 }
 
 macro_rules! dispatch_input {
-    ($plugin:expr, $user_input_arc:expr, $executor:expr, $sender:expr) => {
+    ($plugin:expr, $user_input_arc:expr, $executor:expr, $sender:expr, $pty:expr, $types:expr) => {
         if let Some(plugin) = $plugin.as_ref() {
-            handle_input!($user_input_arc, plugin, $executor, $sender);
+            if contains($types, $pty) {
+                handle_input!($user_input_arc, plugin, $executor, $sender);
+            }
         }
     };
 }
 
 macro_rules! handle_refresh {
-    ($executor:tt, $plugin:expr) => {
+    ($executor:tt, $plugin:expr, $pty:expr, $types:expr) => {
         if let Some(plugin) = $plugin.as_ref() {
-            let plugin = plugin.clone();
-            if let Err(err) = $executor.spawn(async move { plugin.refresh_content() }) {
-                tracing::error!("unable to refresh {}", err)
+            if contains($types, $pty) {
+                let plugin = plugin.clone();
+                if let Err(err) = $executor.spawn(async move { plugin.refresh_content() }) {
+                    tracing::error!("unable to refresh {}", err)
+                }
             }
         }
     };
@@ -175,26 +179,24 @@ impl PluginDispatcher {
 
         loop {
             match self.rx.recv_async().await? {
-                DispatchMsg::UserInput(user_input, sender) => {
-                    let user_input_arc: Arc<UserInput> = user_input;
-
-                    dispatch_input!(self.app, user_input_arc, executor, sender);
+                DispatchMsg::UserInput(user_input_arc, sender, plugin_types) => {
+                    dispatch_input!(self.app, user_input_arc, executor, sender, PluginType::App, &plugin_types);
                     #[cfg(feature = "wmwin")]
-                    dispatch_input!(self.win, user_input_arc, executor, sender);
+                    dispatch_input!(self.win, user_input_arc, executor, sender, PluginType::Win, &plugin_types);
                     #[cfg(feature = "calc")]
-                    dispatch_input!(self.calc, user_input_arc, executor, sender);
+                    dispatch_input!(self.calc, user_input_arc, executor, sender, PluginType::Calc, &plugin_types);
                     #[cfg(feature = "clip")]
-                    dispatch_input!(self.clip, user_input_arc, executor, sender);
+                    dispatch_input!(self.clip, user_input_arc, executor, sender, PluginType::Clip, &plugin_types);
                 }
-                DispatchMsg::RefreshContent => {
-                    handle_refresh!(executor, self.app);
+                DispatchMsg::RefreshContent(plugin_types) => {
+                    handle_refresh!(executor, self.app, PluginType::App, &plugin_types);
                     #[cfg(feature = "wmwin")]
-                    handle_refresh!(executor, self.win);
+                    handle_refresh!(executor, self.win, PluginType::Win, &plugin_types);
                     #[cfg(feature = "calc")]
-                    handle_refresh!(executor, self.calc);
+                    handle_refresh!(executor, self.calc, PluginType::Calc, &plugin_types);
 
                     #[cfg(feature = "clip")]
-                    handle_refresh!(executor, self.clip);
+                    handle_refresh!(executor, self.clip, PluginType::Clip, &plugin_types);
                 }
                 DispatchMsg::SetHistory(prwrapper) => {
                     let history_id = HistoryDb::get_id(&prwrapper.body);

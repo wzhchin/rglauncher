@@ -20,8 +20,6 @@ pub struct Launcher {
 
     pub launcher_tx: Sender<LauncherMsg>,
     launcher_rx: Receiver<LauncherMsg>,
-
-    pub plugin_types: Vec<PluginType>,
 }
 
 pub enum LauncherMsg {
@@ -34,11 +32,10 @@ impl Launcher {
     pub fn spawn(
         application: RGLApplication,
         config: Arc<ParsedConfig>,
-        plugin_types: Vec<PluginType>,
         launcher_tx: &Sender<LauncherMsg>,
         launcher_rx: &Receiver<LauncherMsg>,
     ) -> AResult<Self> {
-        let dispathcer = PluginDispatcher::new(&config, plugin_types.clone())?;
+        let dispathcer = PluginDispatcher::new(&config, vec![])?;
         let dispatcher_tx = dispathcer.tx.clone();
 
         MainContext::ref_thread_default().spawn_local(async move {
@@ -53,7 +50,6 @@ impl Launcher {
             dispatcher_tx,
             launcher_tx: launcher_tx.clone(),
             launcher_rx: launcher_rx.clone(),
-            plugin_types,
         })
     }
 
@@ -64,7 +60,7 @@ impl Launcher {
         let app_args = self.config.clone();
         let app = self.app.clone();
 
-        RGWindow::setup_one(&app, app_args.clone(), &dispatcher_tx, &launcher_tx);
+        RGWindow::setup_one(&app, app_args.clone(), &dispatcher_tx, &launcher_tx, plugin_types.clone());
 
         MainContext::ref_thread_default().spawn_local(async move {
             let dispatcher_tx = dispatcher_tx.clone();
@@ -75,15 +71,16 @@ impl Launcher {
                 match launcher_rx.recv_async().await {
                     Ok(msg) => match msg {
                         LauncherMsg::Exit => {}
-                        LauncherMsg::NewWindow(_pt) => {
+                        LauncherMsg::NewWindow(pt) => {
                             dispatcher_tx
-                                .send(DispatchMsg::RefreshContent)
+                                .send(DispatchMsg::RefreshContent(pt.clone()))
                                 .expect("unable to create new window");
                             RGWindow::setup_one(
                                 &app,
                                 app_args.clone(),
                                 &dispatcher_tx,
                                 &launcher_tx,
+                                pt,
                             );
                         }
                         LauncherMsg::SelectSomething => {}

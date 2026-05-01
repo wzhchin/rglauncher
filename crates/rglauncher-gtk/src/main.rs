@@ -33,8 +33,6 @@ pub fn daemon(arguments: arguments::Arguments) -> EResult {
         .with_timer(tracing_subscriber::fmt::time::time())
         .init();
 
-    let plugin_types = arguments.plugin_types().unwrap_or_default();
-
     let (launcher_tx, launcher_rx) = flume::unbounded();
 
     let app_msg_tx = launcher_tx.clone();
@@ -47,7 +45,7 @@ pub fn daemon(arguments: arguments::Arguments) -> EResult {
     let config = Arc::new(Config::read_from_toml_file(arguments.config_file.as_ref())?);
     iconcache::set_config(&config)?;
 
-    let launcher = launcher::Launcher::spawn(app.clone(), config, plugin_types, &launcher_tx, &launcher_rx)?;
+    let launcher = launcher::Launcher::spawn(app.clone(), config, &launcher_tx, &launcher_rx)?;
 
     app.set_launcher(launcher);
     app.set_hold();

@@ -144,40 +144,43 @@ impl Plugin for ClipPlugin {
     type T = ClipReq;
 
     fn handle_input(&self, user_input: &UserInput) -> AResult<Vec<(ClipResult, i32)>> {
-        if user_input.input.is_empty() {
-            return Err(aanyhow!("empty input"));
-        }
-
         with_clip_db(|conn| {
-            let mut stmt = conn.prepare(
-                "SELECT id, content_type, content, timestamp, icount \
-                 FROM history WHERE content LIKE ? ORDER BY timestamp DESC LIMIT 100",
-            )?;
+            let map_row = |row: &rusqlite::Row| -> rusqlite::Result<(ClipResult, i32)> {
+                let id: String = row.get(0)?;
+                let content_type: String = row.get(1)?;
+                let content: String = row.get(2)?;
+                let is_image = content_type == "image";
+                let display_name = ClipResult::compute_display_name(&content, is_image);
+                Ok((
+                    ClipResult {
+                        content,
+                        content_type,
+                        insert_time: row.get(3)?,
+                        update_time: row.get(3)?,
+                        count: row.get(4)?,
+                        id,
+                        is_image,
+                        display_name,
+                    },
+                    score_utils::middle(0),
+                ))
+            };
 
-            let result = stmt
-                .query_map([format!("%{}%", user_input.input.as_str())], |row| {
-                    let id: String = row.get(0)?;
-                    let content_type: String = row.get(1)?;
-                    let content: String = row.get(2)?;
-                    let is_image = content_type == "image";
-                    let display_name = ClipResult::compute_display_name(&content, is_image);
-                    Ok((
-                        ClipResult {
-                            content,
-                            content_type,
-                            insert_time: row.get(3)?,
-                            update_time: row.get(3)?,
-                            count: row.get(4)?,
-                            id,
-                            is_image,
-                            display_name,
-                        },
-                        score_utils::middle(0),
-                    ))
-                })?
-                .collect::<Result<Vec<(ClipResult, i32)>, rusqlite::Error>>()?;
-
-            Ok(result)
+            if user_input.input.is_empty() {
+                let mut stmt = conn.prepare(
+                    "SELECT id, content_type, content, timestamp, icount \
+                     FROM history ORDER BY timestamp DESC LIMIT 100",
+                )?;
+                let rows = stmt.query_map([], map_row)?;
+                Ok(rows.collect::<Result<Vec<_>, _>>()?)
+            } else {
+                let mut stmt = conn.prepare(
+                    "SELECT id, content_type, content, timestamp, icount \
+                     FROM history WHERE content LIKE ? ORDER BY timestamp DESC LIMIT 100",
+                )?;
+                let rows = stmt.query_map([format!("%{}%", user_input.input.as_str())], map_row)?;
+                Ok(rows.collect::<Result<Vec<_>, _>>()?)
+            }
         })
     }
 

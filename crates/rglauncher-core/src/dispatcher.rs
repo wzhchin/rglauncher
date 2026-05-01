@@ -64,47 +64,33 @@ pub struct PluginDispatcher {
 macro_rules! handle_input {
     ($user_input_arc:expr, $plugin:expr, $executor:expr, $sender:expr ) => {{
         let user_input = $user_input_arc.clone();
-        if user_input.input.is_empty() {
-            $sender
-                .send_async(crate::ResultMsg::Result(
-                    user_input.signal.clone(),
-                    $plugin
-                        .get_history()
-                        .into_iter()
-                        .map(|item| (item.body, item.weight as i32).into())
-                        .collect(),
-                ))
-                .await
-                .unwrap();
-        } else {
-            let sender = $sender.clone();
-            let plugin = $plugin.clone();
-            if let Err(err) = $executor.spawn(async move {
-                match plugin.handle_input(&user_input) {
-                    Ok(result) => {
-                        if user_input.cancelled() {
-                            tracing::info!("cancelled");
-                            return;
-                        }
-                        sender
-                            .send_async(crate::ResultMsg::Result(
-                                user_input.signal.clone(),
-                                result.into_iter().map(|e| e.into()).collect(),
-                            ))
-                            .await
-                            .unwrap();
+        let sender = $sender.clone();
+        let plugin = $plugin.clone();
+        if let Err(err) = $executor.spawn(async move {
+            match plugin.handle_input(&user_input) {
+                Ok(result) => {
+                    if user_input.cancelled() {
+                        tracing::info!("cancelled");
+                        return;
                     }
-                    Err(err) => {
-                        tracing::error!(
-                            "unable to handle input: {} -- {}",
-                            plugin.get_type_id(),
-                            err
-                        );
-                    }
+                    sender
+                        .send_async(crate::ResultMsg::Result(
+                            user_input.signal.clone(),
+                            result.into_iter().map(|e| e.into()).collect(),
+                        ))
+                        .await
+                        .unwrap();
                 }
-            }) {
-                tracing::error!("unable to spawn: {}", err);
+                Err(err) => {
+                    tracing::error!(
+                        "unable to handle input: {} -- {}",
+                        plugin.get_type_id(),
+                        err
+                    );
+                }
             }
+        }) {
+            tracing::error!("unable to spawn: {}", err);
         }
     }};
 }

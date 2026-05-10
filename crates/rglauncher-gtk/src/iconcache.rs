@@ -3,9 +3,9 @@ use chin_tools::{AResult, EResult};
 use fragile::Fragile;
 use gtk::gio;
 use gtk::gio::MemoryInputStream;
-
 use gtk::gdk_pixbuf::Pixbuf;
 use gtk::glib::Bytes;
+use gtk::prelude::*;
 use lazy_static::lazy_static;
 use rglcore::config::ParsedConfig;
 use smol_str::SmolStr;
@@ -71,18 +71,41 @@ pub fn get_pixbuf(name: &str) -> Pixbuf {
     }
 }
 
+fn get_from_icon_theme(name: &str) -> Option<Pixbuf> {
+    let display = gtk::gdk::Display::default()?;
+    let theme = gtk::IconTheme::for_display(&display);
+
+    if !theme.has_icon(name) {
+        return None;
+    }
+
+    let paintable = theme.lookup_icon(
+        name,
+        &[],
+        256,
+        1,
+        gtk::TextDirection::Ltr,
+        gtk::IconLookupFlags::empty(),
+    );
+
+    let file = paintable.file()?;
+    let path = file.path()?;
+
+    Pixbuf::from_file_at_scale(&path, 256, 256, true).ok()
+}
+
 fn get_pixbuf_inner(name: &str) -> Option<Arc<Fragile<Pixbuf>>> {
-    let name = name.to_lowercase();
-    if let Some(icon) = ICON_MAP.load().get(name.as_str()) {
+    let lower_name = name.to_lowercase();
+    if let Some(icon) = ICON_MAP.load().get(lower_name.as_str()) {
         icon.clone()
-    } else if let Some(mapped) = ALIAS_MAP.load().get(name.as_str()) {
+    } else if let Some(mapped) = ALIAS_MAP.load().get(lower_name.as_str()) {
         return get_pixbuf_inner(&mapped);
     } else {
         let icon = ICON_PATHS
             .load()
             .iter()
             .filter_map(|e| {
-                let svg_path = e.join(format!("{}.svg", name));
+                let svg_path = e.join(format!("{}.svg", lower_name));
                 if svg_path.exists() {
                     read_to_string(svg_path)
                         .ok()
@@ -93,13 +116,15 @@ fn get_pixbuf_inner(name: &str) -> Option<Arc<Fragile<Pixbuf>>> {
             })
             .nth(0);
 
-        let icon = icon.clone().map(|e| Arc::new(Fragile::from(e)));
+        let icon = icon.or_else(|| get_from_icon_theme(name));
+
+        let icon = icon.map(|e| Arc::new(Fragile::from(e)));
         let mut icon_map: HashMap<SmolStr, Option<Arc<Fragile<Pixbuf>>>> = ICON_MAP
             .load()
             .iter()
             .map(|(key, icon)| (key.clone(), icon.clone()))
             .collect();
-        icon_map.insert(name.to_lowercase().into(), icon.clone());
+        icon_map.insert(lower_name.into(), icon.clone());
         ICON_MAP.store(Arc::new(icon_map));
 
         return icon;

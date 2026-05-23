@@ -16,6 +16,7 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 rusqlite = { version = "0.39.0", features = ["bundled", "chrono"] }
 chrono = { version = "0.4.31", features = ["serde"] }
 
+blake3 = "1"
 md5 = "0.8.0"
 
 serde = { version = "1.0", features = ["derive"] }

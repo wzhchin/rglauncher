@@ -7,6 +7,7 @@ pub mod history;
 #[cfg(feature = "wmwin")]
 pub mod win;
 
+use std::borrow::Cow;
 use std::ops::Deref;
 
 use app::AppPlugin;
@@ -193,7 +194,7 @@ pub trait PluginResult: Send + Sync + Clone + DeserializeOwned + Serialize {
 
     fn get_type_id(&self) -> &'static str;
 
-    fn get_id(&self) -> &str;
+    fn get_id(&self) -> Cow<'_, str>;
 
     fn to_enum(self) -> PluginResultEnum;
 }
@@ -298,7 +299,7 @@ impl PluginResult for PluginResultEnum {
         primpl!(self, get_type_id)
     }
 
-    fn get_id(&self) -> &str {
+    fn get_id(&self) -> Cow<'_, str> {
         primpl!(self, get_id)
     }
 

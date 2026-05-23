@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::process::Command;
 
@@ -200,8 +201,8 @@ impl PluginResult for WinResult {
         &TYPE_ID
     }
 
-    fn get_id(&self) -> &str {
-        self.address.as_str()
+    fn get_id(&self) -> Cow<'_, str> {
+        Cow::Borrowed(self.address.as_str())
     }
 
     fn to_enum(self) -> super::PluginResultEnum {

@@ -1778,6 +1778,7 @@ version = "0.1.0"
 dependencies = [
  "arboard",
  "arc-swap",
+ "blake3",
  "chin-tools",
  "chrono",
  "dirs",

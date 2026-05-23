@@ -3,8 +3,8 @@ use std::io::Read;
 use miette::{Context, IntoDiagnostic, Result};
 use rglauncher_clip_db::{ClipboardEntry, ContentType, delete_all_entries, init_db, trim_entries, upsert_entry, hash_bytes, delete_entries_older_than};
 
-const MAX_ENTRIES: usize = 1000;
-const MAX_ENTRY_AGE_DAYS: i64 = 14;
+const MAX_ENTRIES: usize = 0;
+const MAX_ENTRY_AGE_DAYS: i64 = 0;
 const MAX_ENTRY_LEN: usize = 5_000_000;
 
 fn main() -> Result<()> {

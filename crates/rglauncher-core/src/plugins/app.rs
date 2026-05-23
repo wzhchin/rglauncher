@@ -12,6 +12,7 @@ use fuzzy_matcher::FuzzyMatcher;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::io;
 use std::option::Option::None;
 use std::os::unix::process::CommandExt;
@@ -88,8 +89,8 @@ impl PluginResult for AppResult {
         TYPE_ID
     }
 
-    fn get_id(&self) -> &str {
-        &self.desktop_path
+    fn get_id(&self) -> Cow<'_, str> {
+        Cow::Borrowed(&self.desktop_path)
     }
 
     fn to_enum(self) -> super::PluginResultEnum {

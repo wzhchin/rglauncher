@@ -7,6 +7,7 @@ use crate::userinput::UserInput;
 use crate::util::score_utils;
 use chin_tools::{AResult, SharedStr};
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use tracing::info;
 
 use super::history::HistoryCache;
@@ -41,8 +42,9 @@ impl PluginResult for CalcResult {
         &TYPE_ID
     }
 
-    fn get_id(&self) -> &str {
-        &TYPE_ID
+    fn get_id(&self) -> Cow<'_, str> {
+        let hash = blake3::hash(self.formula.as_bytes()).to_hex();
+        Cow::Owned(format!("{}{}", TYPE_ID, hash))
     }
 
     fn to_enum(self) -> super::PluginResultEnum {

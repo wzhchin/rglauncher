@@ -3,6 +3,7 @@ use chin_tools::{aanyhow, AResult};
 use chrono::{DateTime, Utc};
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::path::Path;
 
@@ -114,8 +115,8 @@ impl PluginResult for ClipResult {
         &TYPE_ID
     }
 
-    fn get_id(&self) -> &str {
-        self.id.as_str()
+    fn get_id(&self) -> Cow<'_, str> {
+        Cow::Borrowed(self.id.as_str())
     }
 
     fn to_enum(self) -> super::PluginResultEnum {

@@ -100,7 +100,7 @@ impl<'a> HistoryDb<'a> {
     }
 
     pub fn get_id(pr: &PluginResultEnum) -> SharedStr {
-        return (pr.get_type_id().to_owned() + pr.get_id()).into();
+        return (pr.get_type_id().to_owned() + &*pr.get_id()).into();
     }
 
     pub fn fetch_histories<V: Clone + DeserializeOwned>(

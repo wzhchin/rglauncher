@@ -47,8 +47,8 @@ impl RGWindow {
         let result_tx = ResultHolder::start(launcher_tx, dispatch_tx, &sidebar_tx, &preview_tx, plugin_types);
 
         let window = ApplicationWindow::builder()
-            .default_width(810)
-            .default_height(520)
+            .default_width(820)
+            .default_height(540)
             .application(app)
             .resizable(false)
             .title(constants::PROJECT_NAME)

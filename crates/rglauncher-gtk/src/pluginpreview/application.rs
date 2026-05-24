@@ -22,7 +22,7 @@ impl PluginPreview for AppPreview {
             .halign(gtk::Align::Center)
             .build();
 
-        let icon = gtk::Image::builder().pixel_size(256).build();
+        let icon = gtk::Image::builder().pixel_size(128).build();
         preview.attach(&icon, 0, 0, 1, 1);
 
         let name = gtk::Label::builder()
@@ -31,12 +31,15 @@ impl PluginPreview for AppPreview {
             .build();
         preview.attach(&name, 0, 1, 1, 1);
 
-        let desc = gtk::Label::builder().wrap(true).build();
+        let desc = gtk::Label::builder()
+            .wrap(true)
+            .css_classes(["font-16"])
+            .build();
         preview.attach(&desc, 0, 2, 1, 1);
 
         let exec = gtk::Label::builder()
             .wrap(true)
-            .css_classes(["dim-label"])
+            .css_classes(["dim-label", "font-12", "path-font"])
             .build();
         preview.attach(&exec, 0, 3, 1, 1);
 

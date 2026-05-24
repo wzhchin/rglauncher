@@ -30,7 +30,7 @@ impl PluginPreview for WMWindowPreview {
 
         let big_pic = Image::builder()
             .icon_name("gnome-windows")
-            .pixel_size(256)
+            .pixel_size(128)
             .vexpand(true)
             .build();
 

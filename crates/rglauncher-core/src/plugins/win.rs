@@ -269,6 +269,15 @@ impl Plugin for WinPlugin {
         let matcher = SkimMatcherV2::default();
         let mut result = vec![];
 
+        // When the input is empty (e.g. a freshly opened window), the cached
+        // window list may be stale because the daemon-level RefreshContent
+        // triggered on NewWindow races ahead asynchronously and may not have
+        // run yet. Refresh synchronously here so the initial view reflects the
+        // current set of windows instead of a leftover snapshot.
+        if user_input.input.is_empty() {
+            self.refresh_content();
+        }
+
         for window in self.windows.load().iter() {
             let mut score: i32 = 0;
 

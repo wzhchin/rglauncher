@@ -75,8 +75,14 @@ impl Plugin for CalcPlugin {
     type T = CalcReq;
 
     fn handle_input(&self, user_input: &UserInput) -> AResult<Vec<(CalcResult, i32)>> {
-        let mut result = Vec::with_capacity(1);
+        let mut result = Vec::new();
+
         if user_input.input.is_empty() {
+            // Surface recent calculations when the field is empty.
+            for item in self.get_history() {
+                let boost = (item.weight * 20.0) as i64;
+                result.push((item.body, score_utils::high(boost)));
+            }
             return Ok(result);
         }
 

@@ -3,7 +3,7 @@ use crate::plugins::app::AppPlugin;
 #[cfg(feature = "calc")]
 use crate::plugins::calc::CalcPlugin;
 #[cfg(feature = "clip")]
-use crate::plugins::clip::{ClipPlugin, ClipReq};
+use crate::plugins::clip::ClipPlugin;
 use crate::plugins::history::{HistoryDb, HistoryItem};
 #[cfg(feature = "wmwin")]
 use crate::plugins::win::WinPlugin;
@@ -22,7 +22,23 @@ use std::cell::RefCell;
 use std::sync::Arc;
 
 lazy_static! {
-    static ref CONFIG: ArcSwapOption<ParsedConfig> = ArcSwapOption::empty();
+    pub static ref CONFIG: ArcSwapOption<ParsedConfig> = ArcSwapOption::empty();
+}
+
+/// Terminal binary for desktop entries with `Terminal=true` (default `foot`).
+pub fn terminal_cmd() -> String {
+    CONFIG
+        .load()
+        .as_ref()
+        .map(|c| {
+            let t = c.common.terminal_cmd.trim();
+            if t.is_empty() {
+                "foot".to_string()
+            } else {
+                t.to_string()
+            }
+        })
+        .unwrap_or_else(|| "foot".to_string())
 }
 
 thread_local! {
@@ -137,7 +153,13 @@ impl PluginDispatcher {
 
         #[cfg(feature = "wmwin")]
         let win = if contains(&plugin_types, PluginType::Win) {
-            Some(Arc::new(WinPlugin::new()?))
+            match WinPlugin::new() {
+                Ok(p) => Some(Arc::new(p)),
+                Err(e) => {
+                    tracing::warn!("wmwin plugin unavailable (not niri/hypr?): {e:#}");
+                    None
+                }
+            }
         } else {
             None
         };
@@ -151,7 +173,13 @@ impl PluginDispatcher {
 
         #[cfg(feature = "clip")]
         let clip = if contains(&plugin_types, PluginType::Clip) {
-            Some(Arc::new(ClipPlugin::new()?))
+            match ClipPlugin::new() {
+                Ok(p) => Some(Arc::new(p)),
+                Err(e) => {
+                    tracing::warn!("clip plugin unavailable: {e:#}");
+                    None
+                }
+            }
         } else {
             None
         };

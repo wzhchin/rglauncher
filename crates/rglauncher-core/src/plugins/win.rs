@@ -4,8 +4,6 @@ use std::process::Command;
 
 use arc_swap::ArcSwap;
 use chin_tools::{aanyhow, AResult, AnyhowContext, SharedStr};
-use fuzzy_matcher::skim::SkimMatcherV2;
-use fuzzy_matcher::FuzzyMatcher;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
@@ -15,6 +13,7 @@ use crate::plugins::history::{HistoryDb, HistoryItem};
 use crate::plugins::{Plugin, PluginResult};
 use crate::userinput::UserInput;
 
+use crate::util::fuzzy::{fuzzy_atom, fuzzy_score_best, new_matcher};
 use crate::util::score_utils;
 
 use super::history::HistoryCache;
@@ -266,7 +265,6 @@ impl Plugin for WinPlugin {
     }
 
     fn handle_input(&self, user_input: &UserInput) -> AResult<Vec<(WinResult, i32)>> {
-        let matcher = SkimMatcherV2::default();
         let mut result = vec![];
 
         // When the input is empty (e.g. a freshly opened window), the cached
@@ -278,24 +276,32 @@ impl Plugin for WinPlugin {
             self.refresh_content();
         }
 
-        for window in self.windows.load().iter() {
-            let mut score: i32 = 0;
-
-            let mut match_str = window.class.to_string();
-            match_str += window.title.as_str();
-            match_str += window.workspace.as_str();
-
-            if user_input.input.is_empty() {
-                score = 100;
-            } else if let Some(_s) =
-                matcher.fuzzy_match(match_str.as_str(), user_input.input.as_str())
-            {
-                score = _s as i32;
+        let q = user_input.input.as_str();
+        if q.is_empty() {
+            for window in self.windows.load().iter() {
+                result.push((window.clone(), score_utils::high(100)));
             }
+            return Ok(result);
+        }
 
-            if score > 0 {
-                let win = window.clone();
-                result.push((win, score_utils::high((score * 8) as i64)));
+        let pattern = fuzzy_atom(q);
+        let mut matcher = new_matcher();
+        let mut buf = Vec::new();
+        for window in self.windows.load().iter() {
+            if let Some(score) = fuzzy_score_best(
+                &mut matcher,
+                &pattern,
+                &[
+                    window.class.as_str(),
+                    window.title.as_str(),
+                    window.workspace.as_str(),
+                ],
+                &mut buf,
+            ) {
+                result.push((
+                    window.clone(),
+                    score_utils::high((score as i64) * 8),
+                ));
             }
         }
 

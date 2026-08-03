@@ -7,9 +7,9 @@ use arc_swap::ArcSwap;
 use chin_tools::utils::cmd_util::parse_cmd_string;
 use chin_tools::{AResult, SharedStr};
 use freedesktop_desktop_entry::DesktopEntry;
-use fuzzy_matcher::skim::SkimMatcherV2;
-use fuzzy_matcher::FuzzyMatcher;
 use lazy_static::lazy_static;
+use nucleo_matcher::Matcher;
+use parking_lot::Mutex;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -20,6 +20,7 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use tracing::{error, info};
 
+use crate::util::fuzzy::{fuzzy_atom, fuzzy_score_best, new_matcher};
 use crate::util::score_utils;
 
 use super::history::HistoryCache;
@@ -63,11 +64,11 @@ impl PluginResult for AppResult {
                 .replace_all(self.exec.as_str(), "")
                 .trim()
                 .to_string();
-            Command::new("foot")
-                .arg("-e")
-                .arg(true_command)
-                .spawn()
-                .expect("unable to spawn terminal app");
+            let term = crate::dispatcher::terminal_cmd();
+            info!("exec terminal app via {term}: {true_command}");
+            if let Err(e) = Command::new(&term).arg("-e").arg(&true_command).spawn() {
+                error!("unable to spawn terminal app ({term} -e {true_command}): {e}");
+            }
         } else {
             let true_command: Vec<String> = parse_cmd_string(self.exec.as_str())
                 .into_iter()
@@ -101,13 +102,13 @@ impl PluginResult for AppResult {
 pub struct AppPlugin {
     applications: ArcSwap<Vec<AppResult>>,
     history: HistoryCache<AppResult>,
-    matcher: SkimMatcherV2,
+    /// Reused across queries (nucleo Matcher is stateful/alloc-heavy to rebuild).
+    matcher: Mutex<Matcher>,
 }
 
 impl AppPlugin {
     pub fn new() -> AResult<Self> {
         info!("Creating App Plugin");
-        let matcher = SkimMatcherV2::default();
 
         let applications = ArcSwap::new(Self::read_applications().into());
 
@@ -120,7 +121,7 @@ impl AppPlugin {
 
         Ok(AppPlugin {
             applications,
-            matcher,
+            matcher: Mutex::new(new_matcher()),
             history: HistoryCache::new(histories),
         })
     }
@@ -178,23 +179,52 @@ impl Plugin for AppPlugin {
     }
 
     fn handle_input(&self, user_input: &UserInput) -> AResult<Vec<(AppResult, i32)>> {
-        let result = self
-            .applications
-            .load()
+        let histories = self.history.histories.load();
+        let apps = self.applications.load();
+        let q = user_input.input.as_str();
+
+        // Empty query: skip fuzzy work; rank by history only.
+        if q.is_empty() {
+            let mut result: Vec<(AppResult, i32)> = apps
+                .iter()
+                .map(|app| {
+                    let history_id: SharedStr = format!("{}{}", TYPE_ID, app.get_id()).into();
+                    let hist_boost = histories
+                        .get(&history_id)
+                        .map(|h| (h.weight * 20.0) as i64)
+                        .unwrap_or(0);
+                    (app.clone(), score_utils::high(hist_boost))
+                })
+                .collect();
+            result.sort_unstable_by(|a, b| b.1.cmp(&a.1));
+            // Cap early — UI also caps; keeps clone cost down on cold open.
+            if result.len() > 800 {
+                result.truncate(800);
+            }
+            return Ok(result);
+        }
+
+        let pattern = fuzzy_atom(q);
+        let mut matcher = self.matcher.lock();
+        let mut buf = Vec::new();
+        let result = apps
             .iter()
             .filter_map(|app| {
-                let app = app.clone();
-                let score = self
-                    .matcher
-                    .fuzzy_match(&app.app_name, &user_input.input)
+                let score = fuzzy_score_best(
+                    &mut matcher,
+                    &pattern,
+                    &[app.app_name.as_str(), app.id.as_str()],
+                    &mut buf,
+                )?;
+                let history_id: SharedStr = format!("{}{}", TYPE_ID, app.get_id()).into();
+                let hist_boost = histories
+                    .get(&history_id)
+                    .map(|h| (h.weight * 20.0) as i64)
                     .unwrap_or(0);
-
-                if score > 0 || user_input.input.is_empty() {
-                    let high = score_utils::high(score);
-                    Some((app, high))
-                } else {
-                    None
-                }
+                Some((
+                    app.clone(),
+                    score_utils::high(score as i64 + hist_boost),
+                ))
             })
             .collect();
 

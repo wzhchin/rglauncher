@@ -5,9 +5,17 @@ use std::{
 use chin_tools::{aanyhow, AResult};
 use serde::Deserialize;
 
+fn default_terminal_cmd() -> String {
+    "foot".to_string()
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct CommonConfig {
     pub icon_paths: Vec<String>,
+    /// Terminal binary used for `Terminal=true` desktop entries (default: `foot`).
+    /// Invoked as: `{terminal_cmd} -e <command>`.
+    #[serde(default = "default_terminal_cmd")]
+    pub terminal_cmd: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]

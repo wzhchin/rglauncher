@@ -3,10 +3,12 @@ use gtk::gio::ApplicationHoldGuard;
 use gtk::gdk::Display;
 use gtk::subclass::prelude::*;
 use gtk::{glib, style_context_add_provider_for_display, CssProvider};
-use std::cell::OnceCell;
-use tracing::info;
-
 use std::borrow::Borrow;
+use std::cell::OnceCell;
+use std::env;
+use std::path::PathBuf;
+use tracing::{info, warn};
+
 #[derive(Default)]
 pub struct RGLApplication {
     pub(crate) launcher: OnceCell<Launcher>,
@@ -38,8 +40,15 @@ impl ApplicationImpl for RGLApplication {
 impl GtkApplicationImpl for RGLApplication {}
 
 impl RGLApplication {
-    fn load_css(&self) {
-        let provider = CssProvider::new();
+    fn user_css_path() -> PathBuf {
+        let config_dir = match env::var("XDG_CONFIG_PATH") {
+            Ok(path) => path,
+            Err(_) => format!("{}/.config", env::var("HOME").unwrap_or_default()),
+        };
+        PathBuf::from(format!("{}/rgui/rglauncher.css", config_dir))
+    }
+
+    fn embedded_css(&self) -> String {
         let layout_css = include_str!("../styles/layout.css");
         let light_css = include_str!("../styles/light.css");
         let dark_css = include_str!("../styles/dark.css");
@@ -53,11 +62,35 @@ impl RGLApplication {
             None => false,
         };
 
-        let css = format!(
+        format!(
             "{}\n{}",
             if dark_mode { dark_css } else { light_css },
             layout_css
-        );
+        )
+    }
+
+    fn load_css(&self) {
+        let provider = CssProvider::new();
+        let user_path = Self::user_css_path();
+
+        let css = if user_path.is_file() {
+            match std::fs::read_to_string(&user_path) {
+                Ok(content) => {
+                    info!("Loading user CSS from {}", user_path.display());
+                    content
+                }
+                Err(err) => {
+                    warn!(
+                        "Failed to read user CSS {}: {}; using embedded styles",
+                        user_path.display(),
+                        err
+                    );
+                    self.embedded_css()
+                }
+            }
+        } else {
+            self.embedded_css()
+        };
 
         provider.load_from_data(&css);
 

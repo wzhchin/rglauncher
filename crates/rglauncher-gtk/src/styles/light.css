@@ -1,5 +1,5 @@
-/* Alpha must be obvious while debugging; tune later (e.g. 0.80). */
-@define-color window-bg-clr rgba(233, 233, 233, 0.45);
+@define-color window-bg-clr #e9e9e9;
+@define-color window-bg-trans rgba(233, 233, 233, 0.45);
 @define-color prev-bg-clr #f9f9f9;
 @define-color prev-bd-clr #d0d0d0;
 @define-color prev-shd-clr #3030303f;

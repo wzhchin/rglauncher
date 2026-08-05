@@ -34,6 +34,9 @@ pub struct DatabaseConfig {
 pub struct UI {
     pub dark_mode: Option<bool>,
     pub icon_config: Option<String>,
+    /// Window translucency. Default: true (transparent).
+    #[serde(default)]
+    pub transparent: Option<bool>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -57,6 +60,14 @@ impl Deref for ParsedConfig {
 }
 
 impl Config {
+    /// Whether the window uses a translucent background. Default true.
+    pub fn transparent(&self) -> bool {
+        self.ui
+            .as_ref()
+            .and_then(|ui| ui.transparent)
+            .unwrap_or(true)
+    }
+
     pub fn read_from_toml_file(filepath: Option<&String>) -> AResult<ParsedConfig> {
         let config_path = match filepath {
             Some(fp) => PathBuf::from_str(fp.as_str())?,

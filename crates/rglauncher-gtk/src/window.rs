@@ -44,6 +44,11 @@ impl RGWindow {
 
         let result_tx = ResultHolder::start(launcher_tx, dispatch_tx, &sidebar_tx, &preview_tx, plugin_types);
 
+        let mut window_classes = vec!["rgwindow".to_string()];
+        if config.transparent() {
+            window_classes.push("transparent".to_string());
+        }
+
         let window = ApplicationWindow::builder()
             .default_width(810)
             .default_height(520)
@@ -51,7 +56,7 @@ impl RGWindow {
             .resizable(false)
             .title(constants::PROJECT_NAME)
             .decorated(false)
-            .css_classes(["rgwindow"])
+            .css_classes(window_classes)
             .build();
 
         // Horizontal GtkBox height measure uses unconstrained (for_size=-1) mins

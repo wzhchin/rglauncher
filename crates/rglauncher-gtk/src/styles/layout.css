@@ -2,10 +2,19 @@
     font-family: "Inter", "Jost*", sans-serif;
 }
 
+/* Beat Adwaita `window.background` (element+class > single class).
+ * Window fill is light; left-pane stays empty so compositor opacity
+ * reads stronger on the list side. Preview keeps a solid plate. */
+window.background.rgwindow,
+window.rgwindow,
 .rgwindow {
-    background-color: @window-bg-clr;
+    background-color: #dedede90;
     color: @fg-clr;
-    padding: 0px 0px 0px 10px;
+    padding: 0px 0px 0px 0px;
+}
+
+.left-pane {
+    background-color: #dedede90;
 }
 
 entry.inputbar {
@@ -18,23 +27,34 @@ entry.inputbar {
 
 listview {
     border: none;
-    margin-right: 10px;
+    background: transparent;
 }
 
-listview row {
+listview > row {
     border-radius: 5px;
+    margin: 0px 10px 0px 10px;
 }
 
+/* Clear theme paint on the left column so window alpha shows through. */
 .sidebar-sw {
     min-width: 370px;
 }
 
+.sidebar-sw,
+scrolledwindow.sidebar-sw,
+scrolledwindow.sidebar-sw > viewport {
+    background: transparent;
+    background-color: transparent;
+}
+
 .sidebar-view {
     background: transparent;
+    background-color: transparent;
 }
 
 .sidebar-row {
     border-radius: 3px;
+    background: transparent;
 }
 
 .sidebar-row-label {

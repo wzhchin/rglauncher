@@ -72,6 +72,7 @@ impl RGWindow {
             .orientation(gtk::Orientation::Vertical)
             .hexpand(true)
             .vexpand(true)
+            .css_classes(["left-pane"])
             .build();
 
         left_box.append(&inputbar.entry);

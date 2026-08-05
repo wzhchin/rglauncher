@@ -94,10 +94,12 @@ impl RGLApplication {
 
         provider.load_from_data(&css);
 
+        // USER (800) beats THEME/APPLICATION so Adwaita window.background
+        // cannot repaint an opaque surface over our rgba window color.
         style_context_add_provider_for_display(
             &Display::default().expect("Could not connect to a display."),
             &provider,
-            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+            gtk::STYLE_PROVIDER_PRIORITY_USER,
         );
     }
 }

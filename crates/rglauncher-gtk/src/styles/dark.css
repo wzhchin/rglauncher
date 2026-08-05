@@ -1,4 +1,5 @@
-@define-color window-bg-clr #303030;
+/* Alpha must be obvious while debugging; tune later (e.g. 0.80). */
+@define-color window-bg-clr rgba(48, 48, 48, 0.45);
 @define-color prev-bg-clr #101010;
 @define-color prev-bd-clr #393939;
 @define-color prev-shd-clr #202020;

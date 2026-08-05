@@ -27,7 +27,7 @@ impl InputBar {
         let (input_tx, input_rx) = flume::unbounded();
 
         let entry = gtk::Entry::builder()
-            .placeholder_text("Ask me anything...")
+            .placeholder_text("Input Anything...")
             .css_classes(["inputbar"])
             .has_frame(false)
             .build();

@@ -1,67 +1,32 @@
 * {
-    font-family: "Literata 7pt", "Literata", serif;
-    font-weight: 500;
+    font-family: "Inter", "Jost*", sans-serif;
 }
 
 .rgwindow {
     background-color: @window-bg-clr;
     color: @fg-clr;
-    padding: 0px;
-    border-radius: 14px;
-}
-
-.rgwindow decoration {
-    border-radius: 14px;
+    padding: 0px 0px 0px 10px;
 }
 
 entry.inputbar {
-    font-size: 15px;
-    font-weight: 500;
-    letter-spacing: 0.02em;
-    background: @input-bg-clr;
-    margin: 14px 14px 8px 14px;
-    padding: 11px 16px;
+    font-size: 18px;
+    background: transparent;
+    margin: 20px 20px 20px 20px;
     outline-style: none;
-    border: 1px solid @input-bd-clr;
-    border-radius: 10px;
-    color: @fg-clr;
-    caret-color: @accent-clr;
-    transition: border-color 150ms ease, box-shadow 150ms ease;
-}
-
-entry.inputbar:focus {
-    border-color: @accent-clr;
-    box-shadow: 0 0 0 1px alpha(@accent-clr, 0.15);
-}
-
-entry.inputbar placeholder {
-    color: @dim-fg-clr;
-    font-weight: 400;
+    border: none;
 }
 
 listview {
     border: none;
-    margin: 0px 10px 10px 10px;
-    padding: 0px;
+    margin-right: 10px;
 }
 
 listview row {
-    border-radius: 8px;
-    padding: 2px 0px;
-    margin: 1px 4px;
-    transition: background 120ms ease;
-}
-
-listview row:hover {
-    background: @row-hover-clr;
-}
-
-listview row:selected {
-    background: @row-active-clr;
+    border-radius: 5px;
 }
 
 .sidebar-sw {
-    min-width: 340px;
+    min-width: 370px;
 }
 
 .sidebar-view {
@@ -69,40 +34,34 @@ listview row:selected {
 }
 
 .sidebar-row {
-    border-radius: 8px;
-    padding: 7px 10px;
+    border-radius: 3px;
 }
 
 .sidebar-row-label {
-    margin-right: 12px;
+    margin-right: 10px;
     color: @fg-clr;
-    font-size: 14px;
-    font-weight: 600;
 }
 
 .sidebar-row-extra {
+    font-style: italic;
     color: @fg-clr-alt;
-    font-size: 12px;
-    font-weight: 500;
-    letter-spacing: 0.02em;
 }
 
 .preview {
-    min-width: 420px;
+    min-width: 450px;
     background: @prev-bg-clr;
-    border-left: 1px solid @prev-bd-clr;
-    border-radius: 0px 14px 14px 0px;
+    border-left: @prev-bd-clr 1px solid;
 }
 
 .prev-btm-box {
-    margin: 0px 16px 16px 16px;
+    margin: 0px 10px 10px 10px;
 }
 
 .logo-font {
-    font-size: 26px;
-    font-weight: 700;
-    color: @accent-clr;
-    letter-spacing: -0.02em;
+    font-size: 32px;
+    font-style: italic;
+    font-weight: 900;
+    font-family: "Alegyera", serif;
 }
 
 .mm-10 {
@@ -115,44 +74,22 @@ listview row:selected {
 
 .font-12 {
     font-size: 12px;
-    color: @fg-clr-alt;
-    font-weight: 500;
 }
 
 .font-16 {
-    font-size: 15px;
-    font-weight: 500;
+    font-size: 16px;
 }
 
 .font-24 {
-    font-size: 15px;
-    font-weight: 500;
+    font-size: 16px;
 }
 
 .font-32 {
-    font-size: 26px;
-    font-weight: 700;
-    letter-spacing: -0.01em;
+    font-size: 32px;
 }
 
-.dim-label {
-    color: @dim-fg-clr;
-}
 
 .border-red {
-    border-left: @accent-clr 2px solid;
-    padding: 5px 5px 5px 10px;
-    border-radius: 0px 4px 4px 0px;
-}
-
-.path-font {
-    font-family: "IBM Plex Mono", "Noto Sans Mono", monospace;
-    font-size: 12px;
-    font-weight: 400;
-}
-
-.raw-box text {
-    font-family: "IBM Plex Mono", "Noto Sans Mono", monospace;
-    font-size: 14px;
-    font-weight: 400;
+        border-left: #f00 1px solid;
+    padding: 5px 5px 5px 5px;
 }

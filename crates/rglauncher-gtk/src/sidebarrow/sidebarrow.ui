@@ -1,12 +1,13 @@
 <?xml version='1.0' encoding='UTF-8'?>
+<!-- Created with Cambalache 0.12.1 -->
 <interface>
+  <!-- interface-name lll.ui -->
   <requires lib="gtk" version="4.10"/>
   <template class="SidebarRow" parent="GtkBox">
-    <property name="margin-top">4</property>
-    <property name="margin-bottom">4</property>
-    <property name="margin-start">6</property>
-    <property name="margin-end">6</property>
-    <property name="spacing">10</property>
+    <property name="margin-top">10</property>
+    <property name="margin-bottom">10</property>
+    <property name="margin-start">10</property>
+    <property name="margin-end">10</property>
     <style>
       <class name="sidebar-row"/>
     </style>
@@ -15,7 +16,8 @@
         <property name="can-focus">False</property>
         <property name="can-target">False</property>
         <property name="focus-on-click">False</property>
-        <property name="pixel-size">24</property>
+        <property name="pixel-size">28</property>
+        <property name="margin-end">10</property>
         <property name="valign">center</property>
       </object>
     </child>
@@ -26,7 +28,7 @@
         <property name="selectable">False</property>
         <property name="ellipsize">end</property>
         <property name="single-line-mode">True</property>
-        <property name="max-width-chars">28</property>
+        <property name="max-width-chars">30</property>
         <property name="lines">1</property>
         <property name="hexpand">False</property>
         <property name="width-request">0</property>
@@ -42,7 +44,7 @@
         <property name="selectable">False</property>
         <property name="ellipsize">end</property>
         <property name="single-line-mode">True</property>
-        <property name="max-width-chars">28</property>
+        <property name="max-width-chars">30</property>
         <property name="lines">1</property>
         <style>
           <class name="sidebar-row-extra"/>

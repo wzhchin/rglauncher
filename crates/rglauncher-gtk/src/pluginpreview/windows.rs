@@ -20,7 +20,10 @@ impl PluginPreview for WMWindowPreview {
     type PluginResult = WinResult;
 
     fn new() -> Self {
-        let r#box = gtk::Box::builder()
+        // Content area: icon + title, scrollable if the window is short.
+        // pixel_size(256) sets a large min height; ScrolledWindow must not
+        // propagate that as the parent's min height or GtkBox measure breaks.
+        let content = gtk::Box::builder()
             .vexpand(true)
             .hexpand(true)
             .valign(Center)
@@ -30,22 +33,28 @@ impl PluginPreview for WMWindowPreview {
 
         let big_pic = Image::builder()
             .icon_name("gnome-windows")
-            .pixel_size(256)
-            .vexpand(true)
+            .pixel_size(128)
             .build();
-
-        // preview.attach(&big_pic, 0, 0, 1, 1);
-        // preview.attach(&little_pic, 0, 1, 1, 1);
-        r#box.append(&big_pic);
+        content.append(&big_pic);
 
         let title = gtk::Label::builder()
             .css_classes(["font-16"])
             .wrap(true)
             .wrap_mode(WordChar)
+            .max_width_chars(40)
             .selectable(true)
             .build();
-        // preview.attach(&title, 0, 2, 1, 1);
-        r#box.append(&title);
+        content.append(&title);
+
+        let sw = gtk::ScrolledWindow::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .hscrollbar_policy(gtk::PolicyType::Automatic)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
+            .propagate_natural_height(false)
+            .propagate_natural_width(false)
+            .build();
+        sw.set_child(Some(&content));
 
         let sep = super::get_seprator();
         let extra = gtk::Grid::builder()
@@ -53,15 +62,9 @@ impl PluginPreview for WMWindowPreview {
             .vexpand(false)
             .valign(End)
             .css_classes(["prev-btm-box"])
-            .build(); // preview.attach(&extra, 0, 3, 1, 1);
+            .build();
 
         let workspace = super::build_pair_line(&extra, 1, "Workspace: ");
-
-        let sw = gtk::ScrolledWindow::builder()
-            .vexpand(true)
-            .hexpand(true)
-            .build();
-        sw.set_child(Some(&r#box));
 
         let tb = gtk::Box::builder()
             .vexpand(true)

@@ -5,7 +5,7 @@ use gtk::WrapMode::WordChar;
 use rglcore::plugins::calc::CalcResult;
 
 pub struct CalcPreview {
-    root: gtk::Grid,
+    root: gtk::Widget,
     formula_buffer: gtk::TextBuffer,
     result_buffer: gtk::TextBuffer,
 }
@@ -27,7 +27,16 @@ impl PluginPreview for CalcPreview {
             .buffer(&formula_buffer)
             .css_classes(["raw-box", "font-24"])
             .build();
-        preview.attach(&formula_area, 0, 0, 1, 1);
+        let formula_scroll = gtk::ScrolledWindow::builder()
+            .hexpand(true)
+            .vexpand(true)
+            .hscrollbar_policy(gtk::PolicyType::Automatic)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
+            .propagate_natural_height(false)
+            .propagate_natural_width(false)
+            .child(&formula_area)
+            .build();
+        preview.attach(&formula_scroll, 0, 0, 1, 1);
 
         let sep = gtk::Separator::builder().hexpand(true).build();
         preview.attach(&sep, 0, 1, 1, 1);
@@ -44,17 +53,37 @@ impl PluginPreview for CalcPreview {
             .css_classes(["raw-box", "font-24"])
             .buffer(&result_buffer)
             .build();
-        preview.attach(&result_area, 0, 2, 1, 1);
+        let result_scroll = gtk::ScrolledWindow::builder()
+            .hexpand(true)
+            .vexpand(true)
+            .hscrollbar_policy(gtk::PolicyType::Automatic)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
+            .propagate_natural_height(false)
+            .propagate_natural_width(false)
+            .child(&result_area)
+            .build();
+        preview.attach(&result_scroll, 0, 2, 1, 1);
+
+        // Keep TextView content out of the stack's min-height path.
+        let root = gtk::ScrolledWindow::builder()
+            .vexpand(true)
+            .hexpand(true)
+            .hscrollbar_policy(gtk::PolicyType::Automatic)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
+            .propagate_natural_height(false)
+            .propagate_natural_width(false)
+            .child(&preview)
+            .build();
 
         CalcPreview {
-            root: preview,
+            root: root.upcast(),
             formula_buffer,
             result_buffer,
         }
     }
 
     fn get_preview(&self) -> gtk::Widget {
-        self.root.clone().upcast()
+        self.root.clone()
     }
 
     fn set_preview(&self, plugin_result: &Self::PluginResult) {

@@ -7,10 +7,8 @@ use crate::resulthandler::ResultHolder;
 use crate::sidebar::SidebarMsg;
 use flume::{Receiver, Sender};
 use gtk::glib::{clone, MainContext};
-use gtk::{glib, BinLayout};
-use gtk::prelude::{EntryBufferExtManual, LayoutManagerExt};
-use gtk::prelude::{BoxExt, EntryExt, GtkWindowExt, WidgetExt};
-use gtk::{gdk, ApplicationWindow};
+use gtk::prelude::{BoxExt, EntryBufferExtManual, EntryExt, GridExt, GtkWindowExt, WidgetExt};
+use gtk::{gdk, glib, ApplicationWindow};
 use rglcore::config::ParsedConfig;
 use rglcore::dispatcher::DispatchMsg;
 use rglcore::{PluginType, ResultMsg};
@@ -56,19 +54,26 @@ impl RGWindow {
             .css_classes(["rgwindow"])
             .build();
 
-        let main_box = gtk::Box::builder()
-            .orientation(gtk::Orientation::Horizontal)
+        // Horizontal GtkBox height measure uses unconstrained (for_size=-1) mins
+        // but allocated-width naturals. A child with a large unconstrained min
+        // (e.g. 256px icons) and a small natural at half-width yields
+        // min > natural. Use Grid so both columns share one height request.
+        let main_grid = gtk::Grid::builder()
+            .column_homogeneous(false)
+            .row_homogeneous(true)
+            .hexpand(true)
+            .vexpand(true)
             .build();
 
-        window.set_child(Some(&main_box));
+        window.set_child(Some(&main_grid));
 
         let inputbar = InputBar::new(&result_tx, &window_tx);
         let left_box = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .hexpand(true)
+            .vexpand(true)
             .build();
 
-        main_box.append(&left_box);
         left_box.append(&inputbar.entry);
 
         let mut sidebar = crate::sidebar::Sidebar::new(
@@ -85,7 +90,9 @@ impl RGWindow {
         sidebar.loop_recv();
 
         let preview = Preview::new(preview_rx, config);
-        main_box.append(&preview.preview_window.clone());
+
+        main_grid.attach(&left_box, 0, 0, 1, 1);
+        main_grid.attach(&preview.preview_window, 1, 0, 1, 1);
 
         preview.loop_recv();
 

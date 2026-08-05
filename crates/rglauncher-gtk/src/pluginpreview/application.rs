@@ -22,20 +22,29 @@ impl PluginPreview for AppPreview {
             .halign(gtk::Align::Center)
             .build();
 
-        let icon = gtk::Image::builder().pixel_size(256).build();
+        // Keep icon request modest; ScrolledWindow still owns overflow.
+        let icon = gtk::Image::builder().pixel_size(128).build();
         preview.attach(&icon, 0, 0, 1, 1);
 
         let name = gtk::Label::builder()
             .css_classes(["font-32"])
             .wrap(true)
+            .wrap_mode(gtk::pango::WrapMode::WordChar)
+            .max_width_chars(32)
             .build();
         preview.attach(&name, 0, 1, 1, 1);
 
-        let desc = gtk::Label::builder().wrap(true).build();
+        let desc = gtk::Label::builder()
+            .wrap(true)
+            .wrap_mode(gtk::pango::WrapMode::WordChar)
+            .max_width_chars(40)
+            .build();
         preview.attach(&desc, 0, 2, 1, 1);
 
         let exec = gtk::Label::builder()
             .wrap(true)
+            .wrap_mode(gtk::pango::WrapMode::WordChar)
+            .max_width_chars(40)
             .css_classes(["dim-label"])
             .build();
         preview.attach(&exec, 0, 3, 1, 1);
@@ -43,6 +52,10 @@ impl PluginPreview for AppPreview {
         let w = gtk::ScrolledWindow::builder()
             .vexpand(true)
             .hexpand(true)
+            .hscrollbar_policy(gtk::PolicyType::Automatic)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
+            .propagate_natural_height(false)
+            .propagate_natural_width(false)
             .build();
         w.set_child(Some(&preview));
 

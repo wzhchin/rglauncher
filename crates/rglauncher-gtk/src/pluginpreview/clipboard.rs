@@ -2,7 +2,7 @@ use crate::pluginpreview::PluginPreview;
 use chrono::Local;
 use gtk::glib::object::Cast;
 use gtk::pango::WrapMode::WordChar as PangoWordChar;
-use gtk::prelude::{BoxExt, TextBufferExt, WidgetExt};
+use gtk::prelude::{BoxExt, TextBufferExt};
 use gtk::Align::{End, Fill, Start};
 use gtk::WrapMode::WordChar;
 use gtk::{Orientation, Stack, StackTransitionType, TextBuffer, TextView, Widget};
@@ -26,14 +26,6 @@ impl PluginPreview for ClipPreview {
     type PluginResult = ClipResult;
 
     fn new() -> Self {
-        let r#box = gtk::Box::builder()
-            .vexpand(true)
-            .hexpand(true)
-            .valign(Fill)
-            .halign(Fill)
-            .orientation(Orientation::Vertical)
-            .build();
-
         let text_buffer = TextBuffer::builder().build();
         let text_view = TextView::builder()
             .hexpand(true)
@@ -49,9 +41,16 @@ impl PluginPreview for ClipPreview {
             .margin_top(10)
             .build();
 
+        // TextView is scrollable; one ScrolledWindow is enough. Do not nest
+        // another ScrolledWindow around this stack — that breaks height measure
+        // (min height can exceed natural height on GtkBox parents).
         let text_window = gtk::ScrolledWindow::builder()
             .hexpand(true)
             .vexpand(true)
+            .hscrollbar_policy(gtk::PolicyType::Automatic)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
+            .propagate_natural_height(false)
+            .propagate_natural_width(false)
             .build();
         text_window.set_child(Some(&text_view));
 
@@ -70,20 +69,22 @@ impl PluginPreview for ClipPreview {
         let picture_window = gtk::ScrolledWindow::builder()
             .hexpand(true)
             .vexpand(true)
+            .hscrollbar_policy(gtk::PolicyType::Automatic)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
+            .propagate_natural_height(false)
+            .propagate_natural_width(false)
             .build();
         picture_window.set_child(Some(&picture));
 
         let stack = Stack::builder()
             .hexpand(true)
             .vexpand(true)
-            .vhomogeneous(true)
-            .hhomogeneous(true)
+            .vhomogeneous(false)
+            .hhomogeneous(false)
             .transition_type(StackTransitionType::Crossfade)
             .build();
         stack.add_titled(&text_window, Some(STACK_PAGE_TEXT), "Text");
         stack.add_titled(&picture_window, Some(STACK_PAGE_PICTURE), "Picture");
-
-        r#box.append(&stack);
 
         let sep = super::get_seprator();
         let extra = gtk::Grid::builder()
@@ -97,19 +98,14 @@ impl PluginPreview for ClipPreview {
         let count = super::build_pair_line(&extra, 2, "Count: ");
         let time = super::build_pair_line(&extra, 3, "Time: ");
 
-        let sw = gtk::ScrolledWindow::builder()
-            .vexpand(true)
-            .hexpand(true)
-            .build();
-        sw.set_child(Some(&r#box));
-
+        // Content stack + fixed footer. Footer stays outside the scroll area.
         let tb = gtk::Box::builder()
             .vexpand(true)
             .hexpand(true)
             .orientation(Orientation::Vertical)
             .build();
 
-        tb.append(&sw);
+        tb.append(&stack);
         tb.append(&sep);
         tb.append(&extra);
 

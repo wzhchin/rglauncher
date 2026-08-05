@@ -8,7 +8,6 @@ use crate::pluginpreview::clipboard::ClipPreview;
 use crate::pluginpreview::windows::WMWindowPreview;
 use flume::Receiver;
 use gtk::glib::MainContext;
-use gtk::pango::WrapMode::WordChar;
 use gtk::prelude::{GridExt, WidgetExt};
 use gtk::Align::Center;
 use rglcore::config::{Config, ParsedConfig};
@@ -117,10 +116,12 @@ impl PluginPreviewBuilder {
 }
 
 fn build_pair_line(grid: &gtk::Grid, row: i32, title: &str) -> gtk::Label {
+    // Prefer ellipsize over wrap for measure stability: wrapping labels can
+    // report min height > natural height under height-for-width.
     let left = gtk::Label::builder()
         .halign(gtk::Align::Start)
-        .wrap(true)
-        .wrap_mode(WordChar)
+        .ellipsize(gtk::pango::EllipsizeMode::End)
+        .single_line_mode(true)
         .label(title)
         .hexpand(true)
         .build();
@@ -128,8 +129,8 @@ fn build_pair_line(grid: &gtk::Grid, row: i32, title: &str) -> gtk::Label {
     left.add_css_class("font-12");
     let right = gtk::Label::builder()
         .halign(gtk::Align::End)
-        .wrap(true)
-        .wrap_mode(WordChar)
+        .ellipsize(gtk::pango::EllipsizeMode::End)
+        .single_line_mode(true)
         .build();
     grid.attach(&left, 0, row, 1, 1);
     grid.attach(&right, 1, row, 1, 1);
@@ -159,9 +160,14 @@ pub struct Preview {
 
 impl Preview {
     pub fn new(preview_rx: Receiver<PreviewMsg>, config: Arc<ParsedConfig>) -> Self {
+        // homogeneous defaults to true and sizes to the largest page (e.g. 256px
+        // icons). That inflates unconstrained min height and triggers
+        // "natural size must be >= min size" on the parent box/grid.
         let preview_window = gtk::Stack::builder()
             .vexpand(true)
             .hexpand(true)
+            .vhomogeneous(false)
+            .hhomogeneous(false)
             .css_classes(["preview"])
             .build();
 
